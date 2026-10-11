@@ -12,16 +12,16 @@ Build a University Management System for Admin, Teacher, and Student accounts. A
 
 ## 2. Permissions
 
-“Manage” means CRUD on **all records of the permitted role**, following the assignment literally.
+Admins manage every account. Teachers and students use a personal dashboard and can view/update only their own record. Account creation and deletion are admin-only.
 
 | Signed-in role | Admin records | Teacher records | Student records |
 |---|---|---|---|
 | Admin | CRUD | CRUD | CRUD |
-| Teacher | Forbidden | CRUD | Forbidden |
-| Student | Forbidden | Forbidden | CRUD |
+| Teacher | Forbidden | Read/update own account | Forbidden |
+| Student | Forbidden | Forbidden | Read/update own account |
 | Guest | Forbidden | Forbidden | Forbidden |
 
-Example: teachers can delete other teachers. The backend enforces this table for direct API calls too.
+The backend enforces ownership for direct API requests too. Another person's ID in the same collection returns `404`; teacher/student POST and DELETE requests return `403`, including self-deletion.
 
 ## 3. Technology
 
@@ -58,7 +58,7 @@ flowchart LR
 | Dependency injection | Constructor injection connects components and supports testing |
 | Central error handling | Controller advice handles application errors; security handlers format 401/403 responses |
 
-Three controllers pass a fixed role into one service. CRUD record lookups include that role: a teacher route cannot modify a student ID. Share one service and repository.
+Three controllers pass a fixed role into one service. `AccountAccess` checks the authenticated role and stable account ID inside that service. Non-admin lists return only the signed-in account; record lookups require ownership and include the fixed collection role. Share one service and repository.
 
 Under `com.kuet.ums`, use `controller/`, `service/`, `repository/`, `entity/`, and `dto/`, matching the lab's layered structure; add `security/`, `config/`, `exception/`, and `validation/`. Use explicit constructor injection. Pages: `src/main/resources/static/`.
 
@@ -90,7 +90,7 @@ Replace `{resource}` with `admins`, `teachers`, or `students`: **15 CRUD endpoin
 | PUT | `/api/{resource}/{id}` | `200 OK`, updated JSON record |
 | DELETE | `/api/{resource}/{id}` | `204 No Content`, empty body |
 
-Create/update bodies use JSON. Unknown IDs return `404`; updates never create records.
+Create/update bodies use JSON. Unknown or inaccessible IDs return `404`; updates never create records. Admins can use all methods. Teachers/students can GET their own collection/record and PUT their own record; POST and DELETE are admin-only.
 
 **REST rules:**
 
@@ -133,15 +133,15 @@ JSON errors contain `status`, `code`, `message`, and validation field details wh
 |---|---|
 | `400` | Invalid fields or malformed JSON |
 | `401` | Missing/expired login or incorrect credentials |
-| `403` | Wrong role or missing/invalid CSRF token |
-| `404` | Record absent from the permitted collection |
+| `403` | Wrong role, non-admin create/delete, or missing/invalid CSRF token |
+| `404` | Record absent from or inaccessible in the permitted collection |
 | `405` | Unsupported method; include the `Allow` header |
 | `409` | Duplicate email or attempted deletion of the final admin |
 | `415` | Unsupported request content type |
 
 ## 7. Security and initial accounts
 
-- Enforce route permissions through Spring Security and record access through role-scoped services.
+- Enforce route permissions through Spring Security and role/ownership access through `AccountAccess` in the shared service. The browser never decides authorization.
 - Use server-side sessions, `HttpOnly`/`SameSite=Lax` cookies, BCrypt, and CSRF protection. Logout invalidates the session.
 - Sessions expire after 30 minutes of inactivity; the UI redirects to sign-in after `401`.
 - Check the signed-in account still exists on protected requests. Transactionally prevent deleting the final admin.
@@ -152,7 +152,7 @@ Use Spring's [password encoder](https://docs.spring.io/spring-security/reference
 
 ## 8. Minimal interface
 
-Two pages: **login** and **management**. Use a header with name, role, and logout; permitted resource tabs; and a name/email table with edit/delete actions. “Add” opens a short form; deletion requires confirmation.
+Two pages: **login** and **dashboard**. Both dashboards have a header with name, role, and logout. Admins see three collection tabs and a name/email table with add/edit/delete actions. Teachers/students see their own profile card and an Edit profile form for name, email, and optional password. Admin deletion requires confirmation.
 
 White background, readable type, neutral borders, one accent color, consistent spacing, labelled inputs, and a responsive layout. Show loading, empty, success, and error states. Every record operation calls the REST API.
 
@@ -162,7 +162,7 @@ Deliver a multi-stage `Dockerfile`: Maven Wrapper build, Java 17 runtime, non-ro
 
 - `app`: serves the UI and API at `http://localhost:8080`.
 - `db`: PostgreSQL with a named volume and `pg_isready` health check. The app waits for database health, following [Compose startup guidance](https://docs.docker.com/compose/how-tos/startup-order/).
-- Optional `pgadmin`: a browser database viewer at `http://localhost:5050`, enabled through the `tools` profile. IntelliJ and desktop PostgreSQL clients use the same database; see [Database access](DATABASE.md).
+- Optional `pgadmin`: a browser database viewer at `http://localhost:5050`, enabled through the `tools` profile. A mounted server definition registers **University Management** on first startup. IntelliJ and desktop PostgreSQL clients use the same database; see [Database access](DATABASE.md).
 
 Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the app against `localhost:15432`; Docker runs it against `db:5432`. Both read the same `.env` configuration. Exclude secrets, Git metadata, and build output through `.dockerignore`.
 
@@ -172,7 +172,7 @@ Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the ap
 
 - [x] All 15 endpoints return correct JSON/statuses.
 - [x] Create returns `Location`; GET is read-only; PUT requires a complete writable profile; DELETE returns an empty `204` response.
-- [x] Tests cover every role-resource permission pair and unauthenticated requests.
+- [x] Tests cover every role-resource permission pair, ownership, admin-only creation/deletion, and unauthenticated requests.
 - [x] Login/logout work; passwords are hashed and never returned.
 - [x] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and concurrent final-admin protection work.
 - [x] The UI is implemented and its pages/assets are served. Manual click review is listed in [the lab walkthrough](DEMO.md).

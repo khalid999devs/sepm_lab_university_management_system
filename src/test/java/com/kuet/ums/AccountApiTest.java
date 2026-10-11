@@ -15,6 +15,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.*;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -71,17 +74,18 @@ class AccountApiTest {
         long id = users.get(resource).getId();
         AccountPrincipal principal = new AccountPrincipal(users.get(actor));
         boolean allowed = actor == Role.ADMIN || actor == resource;
+        boolean admin = actor == Role.ADMIN;
         int expected = allowed ? 200 : 403;
         mvc.perform(get(route).with(user(principal))).andExpect(status().is(expected));
         mvc.perform(get(route + "/" + id).with(user(principal))).andExpect(status().is(expected));
         MvcResult created = mvc.perform(post(route).with(user(principal)).with(csrf()).contentType("application/json")
                 .content(body("New Account", "new@ums.test", "NewPass123")))
-                .andExpect(status().is(allowed ? 201 : 403)).andReturn();
+                .andExpect(status().is(admin ? 201 : 403)).andReturn();
         mvc.perform(put(route + "/" + id).with(user(principal)).with(csrf()).contentType("application/json")
                 .content(body("Updated Account", users.get(resource).getEmail(), null))).andExpect(status().is(expected));
-        long deleteId = allowed ? json.readTree(created.getResponse().getContentAsString()).get("id").asLong() : id;
+        long deleteId = admin ? json.readTree(created.getResponse().getContentAsString()).get("id").asLong() : id;
         mvc.perform(delete(route + "/" + deleteId).with(user(principal)).with(csrf()))
-                .andExpect(status().is(allowed ? 204 : 403));
+                .andExpect(status().is(admin ? 204 : 403));
         if (!allowed) {
             assertThat(accounts.count()).isEqualTo(3);
             assertThat(accounts.findById(id).orElseThrow().getFullName()).isEqualTo("Test " + resource);
@@ -246,7 +250,7 @@ class AccountApiTest {
     @Test
     void concurrentAdminDeletionsStillLeaveOneAdmin() throws Exception {
         long first = users.get(Role.ADMIN).getId();
-        long second = service.create(Role.ADMIN, new CreateAccountRequest("Second Admin", "second@ums.test", "TestPass123")).id();
+        long second = asRole(Role.ADMIN, () -> service.create(Role.ADMIN, new CreateAccountRequest("Second Admin", "second@ums.test", "TestPass123"))).id();
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService threads = Executors.newFixedThreadPool(2);
@@ -256,7 +260,7 @@ class AccountApiTest {
                 results.add(threads.submit(() -> {
                     ready.countDown();
                     if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Concurrent test did not start.");
-                    try { service.delete(Role.ADMIN, id); return 204; }
+                    try { return asRole(Role.ADMIN, () -> { service.delete(Role.ADMIN, id); return 204; }); }
                     catch (ApiException ex) { return ex.getStatus().value(); }
                 }));
             }
@@ -274,7 +278,8 @@ class AccountApiTest {
     @Test
     void deletedAccountsLoseAccessOnTheirNextRequest() throws Exception {
         MockHttpSession session = login(Role.TEACHER);
-        service.delete(Role.TEACHER, users.get(Role.TEACHER).getId());
+        mvc.perform(delete("/api/teachers/" + users.get(Role.TEACHER).getId())
+                .with(user(new AccountPrincipal(users.get(Role.ADMIN)))).with(csrf())).andExpect(status().isNoContent());
         mvc.perform(get("/api/teachers").session(session)).andExpect(status().isUnauthorized());
         assertThat(session.isInvalid()).isTrue();
     }
@@ -282,8 +287,8 @@ class AccountApiTest {
     @Test
     void editingOwnEmailKeepsSessionIdentityAndPasswordUpdatesAreHashed() throws Exception {
         MockHttpSession session = login(Role.TEACHER);
-        service.update(Role.TEACHER, users.get(Role.TEACHER).getId(),
-                new com.kuet.ums.dto.UpdateAccountRequest("Changed Teacher", "changed@ums.test", "ChangedPass123"));
+        mvc.perform(put("/api/teachers/" + users.get(Role.TEACHER).getId()).session(session).with(csrf()).contentType("application/json")
+                .content(body("Changed Teacher", "changed@ums.test", "ChangedPass123"))).andExpect(status().isOk());
         mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isOk()).andExpect(jsonPath("$.email").value("changed@ums.test"));
         assertThat(passwords.matches("ChangedPass123", accounts.findByEmail("changed@ums.test").orElseThrow().getPasswordHash())).isTrue();
         mvc.perform(post("/api/auth/login").with(csrf()).param("email", "changed@ums.test").param("password", "TestPass123"))
@@ -306,6 +311,63 @@ class AccountApiTest {
         for (String path : List.of("/login.html", "/management.html", "/css/styles.css", "/js/api.js", "/js/login.js", "/js/management.js", "/favicon.svg")) {
             mvc.perform(get(path)).andExpect(status().isOk()).andExpect(header().exists("Content-Security-Policy"));
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Role.class, names = {"TEACHER", "STUDENT"})
+    void personalAccountsCannotReadOrChangeOtherPeopleOfTheSameRole(Role role) throws Exception {
+        UserAccount own = users.get(role);
+        UserAccount other = accounts.saveAndFlush(new UserAccount("Other Person", "other@ums.test", passwords.encode("OtherPass123"), role));
+        MockHttpSession session = login(role);
+        String route = route(role);
+        mvc.perform(get(route).session(session)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].id").value(own.getId()));
+        mvc.perform(get(route + "/" + own.getId()).session(session)).andExpect(status().isOk());
+        for (long id : new long[]{other.getId(), Long.MAX_VALUE}) {
+            mvc.perform(get(route + "/" + id).session(session)).andExpect(status().isNotFound());
+            mvc.perform(put(route + "/" + id).session(session).with(csrf()).contentType("application/json")
+                    .content(body("Changed Person", "changed@ums.test", "ChangedPass123"))).andExpect(status().isNotFound());
+            mvc.perform(delete(route + "/" + id).session(session).with(csrf())).andExpect(status().isForbidden());
+        }
+        mvc.perform(delete(route + "/" + own.getId()).session(session).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(post(route).session(session).with(csrf()).contentType("application/json")
+                .content(body("New Person", "new@ums.test", "NewPass123"))).andExpect(status().isForbidden());
+        mvc.perform(put(route + "/" + own.getId()).session(session).with(csrf()).contentType("application/json")
+                .content(body("My Updated Name", own.getEmail(), null))).andExpect(status().isOk());
+        assertThat(accounts.findById(other.getId()).orElseThrow().getFullName()).isEqualTo("Other Person");
+        mvc.perform(get(route).with(user(new AccountPrincipal(users.get(Role.ADMIN)))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Role.class, names = {"TEACHER", "STUDENT"})
+    void sharedServiceAlsoEnforcesOwnershipAndAdminOnlyWrites(Role role) throws Exception {
+        UserAccount other = accounts.saveAndFlush(new UserAccount("Other Person", "other@ums.test", passwords.encode("OtherPass123"), role));
+        asRole(role, () -> {
+            assertThat(service.list(role)).extracting(account -> account.id()).containsExactly(users.get(role).getId());
+            assertThatThrownBy(() -> service.get(role, other.getId())).isInstanceOf(ApiException.class)
+                    .extracting(ex -> ((ApiException) ex).getStatus().value()).isEqualTo(404);
+            assertThatThrownBy(() -> service.update(role, other.getId(), new com.kuet.ums.dto.UpdateAccountRequest("Changed Person", "changed@ums.test", null)))
+                    .isInstanceOf(ApiException.class).extracting(ex -> ((ApiException) ex).getStatus().value()).isEqualTo(404);
+            assertThatThrownBy(() -> service.create(role, new CreateAccountRequest("New Person", "new@ums.test", "TestPass123")))
+                    .isInstanceOf(ApiException.class).extracting(ex -> ((ApiException) ex).getStatus().value()).isEqualTo(403);
+            assertThatThrownBy(() -> service.delete(role, users.get(role).getId()))
+                    .isInstanceOf(ApiException.class).extracting(ex -> ((ApiException) ex).getStatus().value()).isEqualTo(403);
+            Role foreign = role == Role.TEACHER ? Role.STUDENT : Role.TEACHER;
+            assertThatThrownBy(() -> service.list(foreign)).isInstanceOf(ApiException.class)
+                    .extracting(ex -> ((ApiException) ex).getStatus().value()).isEqualTo(403);
+            return null;
+        });
+    }
+
+    private <T> T asRole(Role role, Callable<T> action) throws Exception {
+        SecurityContext original = SecurityContextHolder.getContext();
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        AccountPrincipal principal = new AccountPrincipal(users.get(role));
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities()));
+        SecurityContextHolder.setContext(context);
+        try { return action.call(); }
+        finally { SecurityContextHolder.setContext(original); }
     }
 
     private MockHttpSession login(Role role) throws Exception {

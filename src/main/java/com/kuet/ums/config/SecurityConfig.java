@@ -7,6 +7,7 @@ import com.kuet.ums.security.*;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.*;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,6 +36,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/", "/index.html", "/login.html", "/management.html", "/css/**", "/js/**", "/favicon.svg", "/actuator/health", "/api/auth/csrf").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/teachers", "/api/teachers/**", "/api/students", "/api/students/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/teachers", "/api/teachers/**", "/api/students", "/api/students/**").hasRole("ADMIN")
                 .requestMatchers("/api/admins", "/api/admins/**").hasRole("ADMIN")
                 .requestMatchers("/api/teachers", "/api/teachers/**").hasAnyRole("ADMIN", "TEACHER")
                 .requestMatchers("/api/students", "/api/students/**").hasAnyRole("ADMIN", "STUDENT")

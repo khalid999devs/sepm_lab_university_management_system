@@ -4,6 +4,7 @@ import com.kuet.ums.dto.*;
 import com.kuet.ums.entity.*;
 import com.kuet.ums.exception.ApiException;
 import com.kuet.ums.repository.AccountRepository;
+import com.kuet.ums.security.AccountAccess;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,22 +17,30 @@ import java.util.List;
 public class AccountService {
     private final AccountRepository accounts;
     private final PasswordEncoder passwords;
+    private final AccountAccess access;
 
-    public AccountService(AccountRepository accounts, PasswordEncoder passwords) {
+    public AccountService(AccountRepository accounts, PasswordEncoder passwords, AccountAccess access) {
         this.accounts = accounts;
         this.passwords = passwords;
+        this.access = access;
     }
 
     public List<AccountResponse> list(Role role) {
+        access.requireCollection(role);
+        if (!access.isAdmin()) {
+            return List.of(AccountResponse.from(requireAccount(role, access.currentAccount().getId())));
+        }
         return accounts.findAllByRoleOrderByIdAsc(role).stream().map(AccountResponse::from).toList();
     }
 
     public AccountResponse get(Role role, Long id) {
+        access.requireOwnerOrAdmin(role, id);
         return AccountResponse.from(requireAccount(role, id));
     }
 
     @Transactional
     public AccountResponse create(Role role, CreateAccountRequest request) {
+        access.requireAdmin();
         if (accounts.existsByEmail(request.email())) throw duplicateEmail();
         UserAccount account = new UserAccount(request.fullName(), request.email(), passwords.encode(request.password()), role);
         return AccountResponse.from(accounts.saveAndFlush(account));
@@ -39,6 +48,7 @@ public class AccountService {
 
     @Transactional
     public AccountResponse update(Role role, Long id, UpdateAccountRequest request) {
+        access.requireOwnerOrAdmin(role, id);
         UserAccount account = requireAccount(role, id);
         if (accounts.existsByEmailAndIdNot(request.email(), id)) throw duplicateEmail();
         account.updateProfile(request.fullName(), request.email());
@@ -49,6 +59,7 @@ public class AccountService {
 
     @Transactional
     public void delete(Role role, Long id) {
+        access.requireAdmin();
         if (role == Role.ADMIN) {
             List<UserAccount> admins = accounts.lockAccountsByRole(Role.ADMIN);
             UserAccount account = admins.stream().filter(admin -> admin.getId().equals(id)).findFirst().orElseThrow(this::notFound);

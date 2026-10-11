@@ -44,10 +44,20 @@ docker compose --profile tools up -d db pgadmin
 
 Open `http://localhost:5050` and sign in with `PGADMIN_EMAIL` and `PGADMIN_PASSWORD` from `.env`. These are pgAdmin login credentials; the database uses `DB_USER` and `DB_PASSWORD`.
 
-1. Choose **Register → Server**. Name it **University Management**.
-2. Under **Connection**, enter the Compose-client settings above: host `db`, port `5432`, and database credentials. Save.
+1. Refresh pgAdmin, expand **Servers**, and open **University Management**. The server definition is imported automatically on a fresh volume.
+2. When asked for its database password, enter `DB_PASSWORD` from `.env` (example: `ums-local-demo`). The login password for pgAdmin is different.
 3. Expand **Servers → University Management → Databases → ums → Schemas → public → Tables**.
 4. Open `user_accounts` through **View/Edit Data → All Rows**, or use the Query Tool.
+
+If **Servers** is empty on an older pgAdmin volume, register **University Management** manually with the Compose-client settings above, or import the supplied definition once:
+
+```sh
+docker compose --profile tools exec pgadmin /venv/bin/python3 /pgadmin4/setup.py load-servers /pgadmin4/servers.json --user admin@example.com
+```
+
+Use your `PGADMIN_EMAIL` if different. The import adds a connection; it does not delete existing servers or database data. Run it once to avoid duplicate entries, following [pgAdmin's server import documentation](https://www.pgadmin.org/docs/pgadmin4/9.18/import_export_servers.html). The supplied JSON uses the example database/user `ums`; update the connection if you customize `DB_NAME` or `DB_USER`.
+
+An empty **Servers** tree means no connection is registered; it does not mean the database has no tables. The **Statistics** tab for the Servers group has no record data. Open the account table's **View/Edit Data** instead.
 
 The browser container uses `db:5432` because it shares the database's Compose network. Connection fields follow the [pgAdmin server dialog](https://www.pgadmin.org/docs/pgadmin4/latest/server_dialog.html); packaging follows [pgAdmin container deployment](https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html).
 

@@ -4,7 +4,7 @@ CSE 3230 · Home task for Lab 4
 
 A small web application for managing Admin, Teacher, and Student accounts. The focus is backend design: REST CRUD, Spring Security, clear responsibilities, and Docker Compose, with a minimal interface.
 
-**Implemented:** 15 CRUD endpoints, session login/logout, BCrypt passwords, role permissions, validation, persistent storage, and sign-in/account management pages.
+**Implemented:** 15 CRUD endpoints, session login/logout, BCrypt passwords, role and ownership permissions, validation, persistent storage, an admin directory, and personal dashboards.
 
 - [Build specification](docs/SPECIFICATION.md) — problem, permissions, architecture, API, and completion criteria.
 - [Local setup report](docs/SETUP.md) — Java, Git, Docker, and verified checks.
@@ -15,7 +15,7 @@ A small web application for managing Admin, Teacher, and Student accounts. The f
 
 **Stack:** Java 17 target (JDK 21 works too), Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, HTML/CSS/JavaScript.
 
-**Core rule:** admins manage all three resources; teachers manage all teacher records; students manage all student records.
+**Core rule:** admins manage all three resources. Teachers and students can view/edit only their own profile; admins create and delete accounts.
 
 ## Run
 
@@ -26,7 +26,7 @@ Copy `.env.example` to `.env` once. Then choose a mode:
 
 Open **http://localhost:8080** to sign in. Health: `http://localhost:8080/actuator/health` returns `{"status":"UP"}`. Use only one application run mode at a time to avoid a port conflict.
 
-To inspect the database, use `localhost:15432`, database `ums`, and the database credentials from `.env`. For a browser UI, run `docker compose --profile tools up -d db pgadmin` and open `http://localhost:5050`; connection steps are in the [database guide](docs/DATABASE.md).
+To inspect the database, use `localhost:15432`, database `ums`, and the database credentials from `.env`. For a browser UI, run `docker compose --profile tools up -d db pgadmin` and open `http://localhost:5050`. The **University Management** server is pre-registered on a fresh pgAdmin volume; connection steps are in the [database guide](docs/DATABASE.md).
 
 The app and pgAdmin have separate logins. With `.env.example` values:
 
@@ -51,7 +51,7 @@ Restarting preserves accounts and password changes. Changing a demo password var
 
 ## Backend design
 
-`controller → service → repository → PostgreSQL`. Three controllers fix the resource role; one service owns transactions and account rules. Request/response DTOs keep credentials out of JSON. Spring Security enforces role access and CSRF; controller advice formats application errors. Components use constructor injection.
+`controller → service → repository → PostgreSQL`. Three controllers fix the resource role; one service owns transactions and account rules. `AccountAccess` enforces ownership and admin-only writes in that service. Request/response DTOs keep credentials out of JSON. Spring Security enforces route access and CSRF; controller advice formats application errors. Components use constructor injection.
 
 The final admin cannot be deleted, including by concurrent requests. Deleted accounts lose access on their next protected request. `PUT` requires name and email; omitting its password preserves the credential.
 
@@ -63,7 +63,7 @@ With Docker running:
 ./mvnw verify
 ```
 
-On Windows, use `.\mvnw.cmd verify`. The 37 integration tests start an isolated PostgreSQL container, apply the real Flyway migrations, and check all role/resource pairs, CRUD, validation, CSRF, sessions, and concurrent admin deletion.
+On Windows, use `.\mvnw.cmd verify`. The 41 integration tests start an isolated PostgreSQL container, apply the real Flyway migrations, and check role/resource pairs, ownership, admin-only writes, CRUD, validation, CSRF, sessions, and concurrent admin deletion.
 
 With the demo app running, optionally check its real HTTP endpoints:
 

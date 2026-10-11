@@ -2,6 +2,8 @@
 
 Base URL: `http://localhost:8080`. Start the app and use an admin demo login from `.env`.
 
+This CRUD example uses an admin. Teachers/students can GET their own collection/record and PUT their own record only. Another person's record returns `404`; their POST/DELETE requests return `403`.
+
 ## 1. Get a login token
 
 ```sh

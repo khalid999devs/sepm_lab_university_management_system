@@ -13,9 +13,9 @@ Checked on **11 October 2026**, Asia/Dhaka.
 
 ## Automated verification
 
-- `./mvnw verify`: **37 tests, 0 failures, 0 errors, 0 skipped**, using an isolated PostgreSQL Testcontainers database and both Flyway migrations.
-- Tests cover all nine role/resource pairs for all CRUD methods, anonymous access, response fields/statuses, validation, email uniqueness, CSRF, login/logout, password updates, deleted sessions, and concurrent final-admin deletion.
-- `python3 scripts/smoke_test.py`: passed against the Docker app and direct Java main-class run. Checks pages, cookies, all role logins, RBAC, CRUD, and logout.
+- `./mvnw verify`: **41 tests, 0 failures, 0 errors, 0 skipped**, using an isolated PostgreSQL Testcontainers database and both Flyway migrations.
+- Tests cover all nine role/resource pairs, personal ownership, admin-only create/delete, direct service authorization, anonymous access, response fields/statuses, validation, email uniqueness, CSRF, login/logout, password updates, deleted sessions, and concurrent final-admin deletion.
+- `python3 scripts/smoke_test.py`: passed against the Docker app and direct Java main-class run. Checks pages, cookies, all role logins, personal ownership, admin CRUD, and logout.
 - Fresh Docker image/stack startup passed. The app runs as non-root user `ums`.
 - Container recreation preserved the same account records. Switching to the direct main-class run preserved them too; demo accounts were not duplicated.
 - JavaScript syntax checks and Git whitespace checks passed.
@@ -25,6 +25,8 @@ Checked on **11 October 2026**, Asia/Dhaka.
 The Maven layout, Java 17 bytecode target, project-root working directory, and shared Application run configuration are ready for IntelliJ. Direct `UniversityManagementApplication.main()` startup passed the full HTTP smoke test; no Spring-specific IDE integration is required.
 
 A local PostgreSQL client connected through `localhost:15432`. The PostgreSQL driver inside the pgAdmin container connected through `db:5432`; both could inspect the project tables. pgAdmin served its login page successfully.
+
+The **University Management** server is now registered for `admin@example.com`. Automatic import of the mounted server definition was verified on a fresh pgAdmin volume. The existing PostgreSQL and pgAdmin volumes were preserved during this update.
 
 ## Verification limits and current state
 

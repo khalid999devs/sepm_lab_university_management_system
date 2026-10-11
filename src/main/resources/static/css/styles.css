@@ -59,6 +59,14 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 .workspace { max-width: 1160px; margin: auto; padding: 48px 30px 70px; }
 .page-heading { margin-bottom: 32px; }
 .page-heading .muted { margin-top: 10px; font-size: .94rem; }
+.profile-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr); gap: 24px; }
+.profile-card { padding: 26px; border: 1px solid var(--border); border-radius: 9px; background: white; }
+.profile-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.profile-details { margin: 24px 0 0; }
+.profile-details div { padding: 16px 0; border-top: 1px solid var(--border); }
+.profile-details dt { color: var(--muted); font-size: .8rem; margin-bottom: 4px; }
+.profile-details dd { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.profile-help p { margin-top: 16px; font-size: .9rem; }
 .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
 .tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); padding: 12px 0; font-size: .91rem; }
 .tab[aria-current="page"] { border-bottom-color: var(--accent); color: var(--accent); font-weight: 600; }
@@ -85,6 +93,7 @@ dialog::backdrop { background: #182c3560; }
 .dialog-heading .muted { font-size: .88rem; margin-top: 7px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 28px; }
 @media (max-width: 700px) {
+    .profile-grid { grid-template-columns: 1fr; }
     .header-inner { padding: 16px 20px; flex-wrap: wrap; }
     .session { width: 100%; }
     .session .button { margin-left: auto; }

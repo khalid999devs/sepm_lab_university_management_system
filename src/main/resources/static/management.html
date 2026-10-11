@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Accounts · University Management</title>
+    <title>Dashboard · University Management</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/styles.css">
     <script type="module" src="/js/management.js"></script>
@@ -20,6 +20,28 @@
     </header>
     <main class="workspace">
         <p id="page-status" class="notice" role="status" aria-live="polite">Loading your workspace…</p>
+        <section id="profile-section" hidden aria-labelledby="dashboard-title">
+            <div class="page-heading">
+                <p class="eyebrow" id="dashboard-role">PERSONAL DASHBOARD</p>
+                <h1 id="dashboard-title">Your dashboard</h1>
+                <p class="muted">View your account and keep your details up to date.</p>
+            </div>
+            <div class="profile-grid">
+                <section class="profile-card" aria-labelledby="profile-title">
+                    <div class="profile-toolbar"><h2 id="profile-title">My profile</h2><button id="edit-profile" class="button primary" type="button">Edit profile</button></div>
+                    <dl class="profile-details">
+                        <div><dt>Full name</dt><dd id="profile-name"></dd></div>
+                        <div><dt>Email address</dt><dd id="profile-email"></dd></div>
+                        <div><dt>Account role</dt><dd id="profile-role"></dd></div>
+                    </dl>
+                </section>
+                <aside class="profile-card profile-help">
+                    <h2>Account settings</h2>
+                    <p class="muted">You can change your name, email address, and password through Edit profile.</p>
+                    <p class="muted">Account creation and removal are handled by an admin.</p>
+                </aside>
+            </div>
+        </section>
         <section id="accounts-section" hidden aria-labelledby="page-title">
             <div class="page-heading">
                 <div><p class="eyebrow">UNIVERSITY DIRECTORY</p><h1>Accounts</h1><p class="muted">Create and maintain the accounts available to your role.</p></div>

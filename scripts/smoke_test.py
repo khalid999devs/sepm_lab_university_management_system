@@ -94,13 +94,25 @@ def main():
 
     admin = Client(args.base_url)
     admin.login('admin@ums.test', config['DEMO_ADMIN_PASSWORD'])
+    members = {}
     for role in ('TEACHER', 'STUDENT'):
         client = Client(args.base_url)
         identity = client.login(role.lower() + '@ums.test', config['DEMO_' + role + '_PASSWORD'])
         assert identity['role'] == role, 'Incorrect login role'
+        members[role] = client
         for resource in ('admins', 'teachers', 'students'):
             expected = 200 if resource == role.lower() + 's' else 403
             assert client.call('/api/' + resource)[0] == expected, 'Role permissions failed'
+        route = '/api/' + role.lower() + 's'
+        records = client.call(route)[2]
+        assert len(records) == 1 and records[0]['id'] == identity['id'], 'Personal collection exposed another account'
+        assert client.call(route + '/' + str(identity['id']), 'PUT', body={
+            'fullName': identity['fullName'], 'email': identity['email']
+        })[0] == 200, 'Own-profile update failed'
+        assert client.call(route, 'POST', body={
+            'fullName': 'Blocked Account', 'email': 'blocked@ums.test', 'password': 'BlockedPass123'
+        })[0] == 403, 'Personal account could create another account'
+        assert client.call(route + '/' + str(identity['id']), 'DELETE')[0] == 403, 'Personal account could delete its account'
 
     suffix = uuid.uuid4().hex[:12]
     for resource in ('admins', 'teachers', 'students'):
@@ -114,6 +126,13 @@ def main():
         location = headers.get('Location')
         assert location == route + '/' + str(account['id']), 'Missing resource Location header'
         try:
+            role = account['role']
+            if role in members:
+                member = members[role]
+                assert member.call(location)[0] == 404, 'Personal account exposed another account'
+                assert member.call(location, 'PUT', body={'fullName': 'Blocked Edit', 'email': email})[0] == 404, 'Personal account could edit another account'
+                assert member.call(location, 'DELETE')[0] == 403, 'Personal account could delete another account'
+                assert len(member.call(route)[2]) == 1, 'Personal account list included another account'
             assert admin.call(location)[0] == 200, 'Created resource could not be read'
             assert admin.call(location, 'PUT', body={'fullName': 'Edited Account', 'email': email})[0] == 200, 'Account update failed'
             assert admin.call(location)[2]['fullName'] == 'Edited Account', 'Update was not persisted'
@@ -127,7 +146,7 @@ def main():
     assert admin.call('/api/auth/logout', 'POST')[0] == 204, 'Logout failed'
     admin.csrf = None
     assert admin.call('/api/auth/me')[0] == 401, 'Logout left an authenticated session'
-    print('HTTP smoke checks passed: pages, cookies, all role logins, RBAC, CRUD, and logout.')
+    print('HTTP smoke checks passed: pages, cookies, all role logins, ownership, admin CRUD, and logout.')
 
 
 if __name__ == '__main__':

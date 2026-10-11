@@ -10,6 +10,7 @@ let editing;
 let deleting;
 let busy = false;
 let loadVersion = 0;
+let currentAccount;
 
 function handleError(error, element = $('#page-status')) {
     if (error.status === 401) {
@@ -21,8 +22,15 @@ function handleError(error, element = $('#page-status')) {
 
 async function identity() {
     const me = await request('/api/auth/me');
+    currentAccount = me;
     $('#identity').textContent = me.fullName;
     $('#role').textContent = me.role.charAt(0) + me.role.slice(1).toLowerCase();
+    if (me.role !== 'ADMIN') {
+        $('#dashboard-role').textContent = `${me.role} DASHBOARD`;
+        $('#profile-name').textContent = me.fullName;
+        $('#profile-email').textContent = me.email;
+        $('#profile-role').textContent = $('#role').textContent;
+    }
     return me;
 }
 
@@ -93,8 +101,8 @@ function openForm(account) {
     editing = account;
     form.reset();
     clearFieldErrors();
-    $('#form-title').textContent = account ? 'Edit account' : 'Add account';
-    $('#form-description').textContent = `Collection: ${collections[collection]}`;
+    $('#form-title').textContent = currentAccount.role !== 'ADMIN' ? 'Edit my profile' : account ? 'Edit account' : 'Add account';
+    $('#form-description').textContent = currentAccount.role !== 'ADMIN' ? 'Update your personal details.' : `Collection: ${collections[collection]}`;
     form.elements.fullName.value = account?.fullName || '';
     form.elements.email.value = account?.email || '';
     form.elements.password.required = !account;
@@ -121,6 +129,7 @@ for (const modal of [dialog, deleteDialog]) {
     modal.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 }
 $('#add').addEventListener('click', () => openForm());
+$('#edit-profile').addEventListener('click', () => openForm(currentAccount));
 $('#refresh').addEventListener('click', () => loadAccounts());
 $('#cancel-account').addEventListener('click', () => dialog.close());
 $('#cancel-delete').addEventListener('click', () => deleteDialog.close());
@@ -139,7 +148,7 @@ form.addEventListener('submit', async event => {
         dialog.close();
         await identity();
         showNotice($('#page-status'), editing ? 'Account updated.' : 'Account created.', 'success');
-        await loadAccounts(false);
+        if (currentAccount.role === 'ADMIN') await loadAccounts(false);
     } catch (error) {
         handleError(error, dialog.open ? $('#form-status') : $('#page-status'));
         for (const [field, message] of Object.entries(error.fields || {})) {
@@ -175,17 +184,22 @@ $('#logout').addEventListener('click', async () => {
 try {
     const me = await identity();
     await refreshCsrf();
-    const permitted = me.role === 'ADMIN' ? Object.keys(collections) : [me.role === 'TEACHER' ? 'teachers' : 'students'];
-    for (const key of permitted) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'tab';
-        button.dataset.collection = key;
-        button.textContent = collections[key];
-        button.addEventListener('click', () => selectCollection(key));
-        $('#resource-tabs').append(button);
-    }
     $('#session').hidden = false;
-    $('#accounts-section').hidden = false;
-    selectCollection(permitted[0]);
+    if (me.role !== 'ADMIN') {
+        collection = me.role === 'TEACHER' ? 'teachers' : 'students';
+        $('#profile-section').hidden = false;
+        showNotice($('#page-status'), '');
+    } else {
+        for (const key of Object.keys(collections)) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'tab';
+            button.dataset.collection = key;
+            button.textContent = collections[key];
+            button.addEventListener('click', () => selectCollection(key));
+            $('#resource-tabs').append(button);
+        }
+        $('#accounts-section').hidden = false;
+        selectCollection('admins');
+    }
 } catch (error) { handleError(error); }
