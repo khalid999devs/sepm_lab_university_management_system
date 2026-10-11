@@ -28,6 +28,15 @@ Open **http://localhost:8080** to sign in. Health: `http://localhost:8080/actuat
 
 To inspect the database, use `localhost:15432`, database `ums`, and the database credentials from `.env`. For a browser UI, run `docker compose --profile tools up -d db pgadmin` and open `http://localhost:5050`; connection steps are in the [database guide](docs/DATABASE.md).
 
+The app and pgAdmin have separate logins. With `.env.example` values:
+
+| Page | Login email | Password |
+|---|---|---|
+| App at `localhost:8080` | `admin@ums.test` | `AdminPass123` |
+| pgAdmin at `localhost:5050` | `admin@example.com` | `pgadmin-local-demo` |
+
+Enter the full email address; passwords are case-sensitive. When pgAdmin asks for the PostgreSQL connection, use host `db`, port `5432`, database/user `ums`, and `DB_PASSWORD` from `.env` (example: `ums-local-demo`).
+
 ## Demo accounts
 
 The default `demo` profile seeds these accounts only when the database is empty. Passwords come from `.env`; the example values are shown below.
