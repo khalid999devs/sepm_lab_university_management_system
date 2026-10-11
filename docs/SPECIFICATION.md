@@ -1,0 +1,149 @@
+# Build Specification
+
+## 1. Problem statement
+
+Build a University Management System for Admin, Teacher, and Student accounts. Authenticated users create, read, update, and delete records according to their role. Provide REST APIs, hashed passwords, server-enforced permissions, and Docker Compose startup.
+
+**Goal:** demonstrate backend design through a small, clean web interface.
+
+**Scope:** account management only; courses, attendance, and grades are outside this lab.
+
+## 2. Permissions
+
+“Manage” means CRUD on **all records of the permitted role**, following the assignment literally.
+
+| Signed-in role | Admin records | Teacher records | Student records |
+|---|---|---|---|
+| Admin | CRUD | CRUD | CRUD |
+| Teacher | Forbidden | CRUD | Forbidden |
+| Student | Forbidden | Forbidden | CRUD |
+| Guest | Forbidden | Forbidden | Forbidden |
+
+Example: teachers can delete other teachers. The backend enforces this table for direct API calls too.
+
+## 3. Technology
+
+| Part | Choice | Purpose |
+|---|---|---|
+| Backend | Java 21 target, Spring Boot 4.1.1 | One executable application |
+| Build | Maven Wrapper | Build without installing Maven globally |
+| Persistence | PostgreSQL 17, Spring Data JPA | Persistent account records |
+| Schema | Flyway | Versioned database creation; JPA validates the schema |
+| Security | Spring Security, BCrypt, HTTP sessions | Login, logout, hashing, and role checks |
+| UI | HTML, CSS, vanilla JavaScript | Small pages served by the same application |
+| Verification | JUnit, MockMvc, Compose smoke test | CRUD, authentication, permissions, and startup |
+
+Java 21 is compatible with [Spring Boot 4.1.1](https://docs.spring.io/spring-boot/system-requirements.html); PostgreSQL 17 is [supported](https://www.postgresql.org/support/versioning/). Spring manages dependency versions.
+
+## 4. Backend design and patterns
+
+One application, with this request path:
+
+```mermaid
+flowchart LR
+    Client[Browser or API client] --> Security[Spring Security]
+    Security --> Controller[Admin / Teacher / Student controllers]
+    Controller --> Service[Shared account service]
+    Service --> Repository[Account repository]
+    Repository --> Database[(PostgreSQL)]
+```
+
+| Pattern | Responsibility |
+|---|---|
+| Layered architecture | Controllers handle HTTP; the service handles rules and transactions |
+| Repository | A Spring Data repository performs database access |
+| DTO | Separate request/response objects keep password hashes out of JSON |
+| Dependency injection | Constructor injection connects components and supports testing |
+| Central error handling | Controller advice handles application errors; security handlers format 401/403 responses |
+
+Three controllers pass a fixed role into one service. All database lookups include that role: a teacher route cannot modify a student ID. Share one service and repository.
+
+Packages: `account/` (entity, DTOs, service, repository), `api/` (controllers), `security/`, `config/`, and `error/`. Pages: `src/main/resources/static/`.
+
+## 5. Data model
+
+Each record is also a login account. Three REST resources share one `user_accounts` table with identical fields.
+
+| Database field | Type | Rule |
+|---|---|---|
+| `id` | `bigint` identity | Generated primary key |
+| `full_name` | `text` | Required; trimmed, 2–100 characters |
+| `email` | `text` | Required, valid, lowercase, globally unique |
+| `password_hash` | `text` | Required; BCrypt hash only |
+| `role` | `text` | Required; check constraint allows `ADMIN`, `TEACHER`, `STUDENT` |
+
+The database enforces uniqueness and required fields. The URL fixes the role; clients cannot change it. Creation requires a password: minimum 8 characters, maximum 72 UTF-8 bytes. Updates require `fullName` and `email`; omitting the password preserves its hash.
+
+Responses contain `id`, `fullName`, `email`, and `role`; passwords/hashes never appear in responses or logs. Wrong-collection IDs return `404`.
+
+## 6. REST contract
+
+Replace `{resource}` with `admins`, `teachers`, or `students`: **15 CRUD endpoints**.
+
+| Method | Route | Success |
+|---|---|---|
+| POST | `/api/{resource}` | `201 Created`, JSON record, `Location` header |
+| GET | `/api/{resource}` | `200 OK`, JSON array ordered by ID; `[]` when empty |
+| GET | `/api/{resource}/{id}` | `200 OK`, JSON record |
+| PUT | `/api/{resource}/{id}` | `200 OK`, updated JSON record |
+| DELETE | `/api/{resource}/{id}` | `204 No Content`, empty body |
+
+Create/update bodies use JSON. Unknown IDs return `404`; updates never create records.
+
+Use Spring Security form login with JSON success/failure handlers:
+
+| Method | Route | Contract |
+|---|---|---|
+| GET | `/api/auth/csrf` | Public; `200`, JSON token and header name |
+| POST | `/api/auth/login` | Form-encoded `email` and `password`; `200`, JSON identity and session cookie |
+| GET | `/api/auth/me` | Authenticated; `200`, JSON identity |
+| POST | `/api/auth/logout` | `204`; invalidates session and clears session cookie |
+
+All writes, including login/logout, require CSRF tokens. Fetch a fresh token after login/logout. CRUD bodies and responses are JSON; login input is form-encoded.
+
+JSON errors contain `status`, `code`, `message`, and validation field details when applicable.
+
+| Status | Meaning |
+|---|---|
+| `400` | Invalid fields or malformed JSON |
+| `401` | Missing/expired login or incorrect credentials |
+| `403` | Wrong role or missing/invalid CSRF token |
+| `404` | Record absent from the permitted collection |
+| `409` | Duplicate email or attempted deletion of the final admin |
+
+## 7. Security and initial accounts
+
+- Enforce route permissions through Spring Security and record access through role-scoped services.
+- Use server-side sessions, `HttpOnly`/`SameSite=Lax` cookies, BCrypt, and CSRF protection. Logout invalidates the session.
+- Check the signed-in account still exists on protected requests. Transactionally prevent deleting the final admin.
+- Seed one account per role on an empty database in the demo profile. Read passwords from environment variables and hash them; restarts preserve existing accounts.
+- Create accounts through authorized endpoints. Store credentials in ignored `.env`; document variables in `.env.example`.
+
+Use Spring's [password encoder](https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/password-encoder.html), [logout support](https://docs.spring.io/spring-security/reference/servlet/authentication/logout.html), and [CSRF protection](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html).
+
+## 8. Minimal interface
+
+Two pages: **login** and **management**. Use a header with name, role, and logout; permitted resource tabs; and a name/email table with edit/delete actions. “Add” opens a short form; deletion requires confirmation.
+
+White background, readable type, neutral borders, one accent color, consistent spacing, labelled inputs, and a responsive layout. Show loading, empty, success, and error states. Every record operation calls the REST API.
+
+## 9. Docker and completion
+
+Deliver a multi-stage `Dockerfile`: Maven Wrapper build, Java 21 runtime, non-root user. `compose.yaml` starts:
+
+- `app`: serves the UI and API at `http://localhost:8080`.
+- `db`: PostgreSQL with a named volume and `pg_isready` health check. The app waits for database health, following [Compose startup guidance](https://docs.docker.com/compose/how-tos/startup-order/).
+
+Publish only the app port on localhost. Configure connections through environment variables and hostname `db`. Exclude secrets, Git metadata, and build output through `.dockerignore`.
+
+**Build order:** project and migration → shared CRUD service and three controllers → login/RBAC → minimal UI → Docker packaging → verification.
+
+**Finished when:**
+
+- [ ] All 15 endpoints return correct JSON/statuses.
+- [ ] Tests cover every role-resource permission pair and unauthenticated requests.
+- [ ] Login/logout work; passwords are hashed and never returned.
+- [ ] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and final-admin protection work.
+- [ ] The UI supports permitted CRUD and clear errors.
+- [ ] `docker compose up --build` works from a fresh checkout; restarts preserve records.
+- [ ] README documents startup, configuration, demo login, and an API example.
