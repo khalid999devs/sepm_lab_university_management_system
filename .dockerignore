@@ -1,0 +1,11 @@
+.git
+.idea
+.vscode
+.run
+.env
+.env.*
+target
+build
+docs
+*.log
+.DS_Store

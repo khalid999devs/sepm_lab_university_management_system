@@ -25,7 +25,7 @@ Example: teachers can delete other teachers. The backend enforces this table for
 
 | Part | Choice | Purpose |
 |---|---|---|
-| Backend | Java 21 target, Spring Boot 4.1.1 | One executable application |
+| Backend | Java 17 target, Spring Boot 3.5.16 | One executable application; aligns with the lab's Spring Boot 3 setup |
 | Build | Maven Wrapper | Build without installing Maven globally |
 | Persistence | PostgreSQL 17, Spring Data JPA | Persistent account records |
 | Schema | Flyway | Versioned database creation; JPA validates the schema |
@@ -33,7 +33,7 @@ Example: teachers can delete other teachers. The backend enforces this table for
 | UI | HTML, CSS, vanilla JavaScript | Small pages served by the same application |
 | Verification | JUnit, MockMvc, Compose smoke test | CRUD, authentication, permissions, and startup |
 
-Java 21 is compatible with [Spring Boot 4.1.1](https://docs.spring.io/spring-boot/system-requirements.html); PostgreSQL 17 is [supported](https://www.postgresql.org/support/versioning/). Spring manages dependency versions.
+Java 17 is compatible with [Spring Boot 3.5.16](https://docs.spring.io/spring-boot/3.5/system-requirements.html); PostgreSQL 17 is [supported](https://www.postgresql.org/support/versioning/). Spring manages dependency versions. Use a standard Maven project that imports and runs in IntelliJ IDEA; see [the IntelliJ guide](INTELLIJ.md).
 
 ## 4. Backend design and patterns
 
@@ -58,7 +58,7 @@ flowchart LR
 
 Three controllers pass a fixed role into one service. All database lookups include that role: a teacher route cannot modify a student ID. Share one service and repository.
 
-Packages: `account/` (entity, DTOs, service, repository), `api/` (controllers), `security/`, `config/`, and `error/`. Pages: `src/main/resources/static/`.
+Under `com.kuet.ums`, use `controller/`, `service/`, `repository/`, `entity/`, and `dto/`, matching the lab's layered structure; add `security/`, `config/`, and `exception/`. Use explicit constructor injection. Pages: `src/main/resources/static/`.
 
 ## 5. Data model
 
@@ -129,12 +129,12 @@ White background, readable type, neutral borders, one accent color, consistent s
 
 ## 9. Docker and completion
 
-Deliver a multi-stage `Dockerfile`: Maven Wrapper build, Java 21 runtime, non-root user. `compose.yaml` starts:
+Deliver a multi-stage `Dockerfile`: Maven Wrapper build, Java 17 runtime, non-root user. `compose.yaml` starts:
 
 - `app`: serves the UI and API at `http://localhost:8080`.
 - `db`: PostgreSQL with a named volume and `pg_isready` health check. The app waits for database health, following [Compose startup guidance](https://docs.docker.com/compose/how-tos/startup-order/).
 
-Publish only the app port on localhost. Configure connections through environment variables and hostname `db`. Exclude secrets, Git metadata, and build output through `.dockerignore`.
+Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the app against `localhost:15432`; Docker runs it against `db:5432`. Both read the same `.env` configuration. Exclude secrets, Git metadata, and build output through `.dockerignore`.
 
 **Build order:** project and migration → shared CRUD service and three controllers → login/RBAC → minimal UI → Docker packaging → verification.
 
@@ -146,4 +146,5 @@ Publish only the app port on localhost. Configure connections through environmen
 - [ ] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and final-admin protection work.
 - [ ] The UI supports permitted CRUD and clear errors.
 - [ ] `docker compose up --build` works from a fresh checkout; restarts preserve records.
+- [ ] IntelliJ imports `pom.xml` with JDK 17 and runs the main class against the database; both run modes use the same application code.
 - [ ] README documents startup, configuration, demo login, and an API example.
