@@ -21,6 +21,10 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-ums}
       DB_USER: ${DB_USER:-ums}
       DB_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env first}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?Set DEMO_ADMIN_PASSWORD in .env}
+      DEMO_TEACHER_PASSWORD: ${DEMO_TEACHER_PASSWORD:?Set DEMO_TEACHER_PASSWORD in .env}
+      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:?Set DEMO_STUDENT_PASSWORD in .env}
       PORT: 8080
     ports:
       - "127.0.0.1:${PORT:-8080}:8080"
