@@ -78,7 +78,7 @@ def main():
             status, _, body = anonymous.call('/actuator/health')
             if status == 200 and body.get('status') == 'UP':
                 break
-        except (URLError, TimeoutError):
+        except (URLError, TimeoutError, ConnectionError):
             pass
         time.sleep(1)
     else:

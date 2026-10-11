@@ -1,6 +1,6 @@
 # Build Specification
 
-**Status:** the runnable foundation and database migration are present. The CRUD, security, and UI behavior below is the implementation contract.
+**Status:** backend, security, demo accounts, minimal UI, and Docker setup are implemented. Automated API/startup checks pass; GUI verification limits are recorded in [the setup report](SETUP.md).
 
 ## 1. Problem statement
 
@@ -58,9 +58,9 @@ flowchart LR
 | Dependency injection | Constructor injection connects components and supports testing |
 | Central error handling | Controller advice handles application errors; security handlers format 401/403 responses |
 
-Three controllers pass a fixed role into one service. All database lookups include that role: a teacher route cannot modify a student ID. Share one service and repository.
+Three controllers pass a fixed role into one service. CRUD record lookups include that role: a teacher route cannot modify a student ID. Share one service and repository.
 
-Under `com.kuet.ums`, use `controller/`, `service/`, `repository/`, `entity/`, and `dto/`, matching the lab's layered structure; add `security/`, `config/`, and `exception/`. Use explicit constructor injection. Pages: `src/main/resources/static/`.
+Under `com.kuet.ums`, use `controller/`, `service/`, `repository/`, `entity/`, and `dto/`, matching the lab's layered structure; add `security/`, `config/`, `exception/`, and `validation/`. Use explicit constructor injection. Pages: `src/main/resources/static/`.
 
 ## 5. Data model
 
@@ -70,7 +70,7 @@ Each record is also a login account. Three REST resources share one `user_accoun
 |---|---|---|
 | `id` | `bigint` identity | Generated primary key |
 | `full_name` | `text` | Required; trimmed, 2–100 characters |
-| `email` | `text` | Required, valid, lowercase, globally unique |
+| `email` | `text` | Required, valid, lowercase, globally unique; API limit 254 characters |
 | `password_hash` | `text` | Required; BCrypt hash only |
 | `role` | `text` | Required; check constraint allows `ADMIN`, `TEACHER`, `STUDENT` |
 
@@ -143,6 +143,7 @@ JSON errors contain `status`, `code`, `message`, and validation field details wh
 
 - Enforce route permissions through Spring Security and record access through role-scoped services.
 - Use server-side sessions, `HttpOnly`/`SameSite=Lax` cookies, BCrypt, and CSRF protection. Logout invalidates the session.
+- Sessions expire after 30 minutes of inactivity; the UI redirects to sign-in after `401`.
 - Check the signed-in account still exists on protected requests. Transactionally prevent deleting the final admin.
 - Seed one account per role on an empty database in the demo profile. Read passwords from environment variables and hash them; restarts preserve existing accounts.
 - Create accounts through authorized endpoints. Store credentials in ignored `.env`; document variables in `.env.example`.
@@ -167,15 +168,15 @@ Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the ap
 
 **Build order:** project and migration → shared CRUD service and three controllers → login/RBAC → minimal UI → Docker packaging → verification.
 
-**Finished when:**
+**Completion checks:**
 
-- [ ] All 15 endpoints return correct JSON/statuses.
-- [ ] Create returns `Location`; GET is read-only; PUT requires a complete writable profile; DELETE returns an empty `204` response.
-- [ ] Tests cover every role-resource permission pair and unauthenticated requests.
-- [ ] Login/logout work; passwords are hashed and never returned.
-- [ ] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and final-admin protection work.
-- [ ] The UI supports permitted CRUD and clear errors.
-- [ ] `docker compose up --build` works from a fresh checkout; restarts preserve records.
-- [ ] IntelliJ imports `pom.xml` with JDK 17 and runs the main class against the database; both run modes use the same application code.
-- [ ] IntelliJ/desktop clients can inspect `localhost:15432`; browser pgAdmin can inspect `db:5432`.
-- [ ] README documents startup, configuration, demo login, and an API example.
+- [x] All 15 endpoints return correct JSON/statuses.
+- [x] Create returns `Location`; GET is read-only; PUT requires a complete writable profile; DELETE returns an empty `204` response.
+- [x] Tests cover every role-resource permission pair and unauthenticated requests.
+- [x] Login/logout work; passwords are hashed and never returned.
+- [x] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and concurrent final-admin protection work.
+- [x] The UI is implemented and its pages/assets are served. Manual click review is listed in [the lab walkthrough](DEMO.md).
+- [x] A fresh Compose build works; container recreation and switching app run modes preserve records.
+- [x] The shared IntelliJ run configuration uses the main class; direct main-class HTTP checks pass. IDE import/clicks remain manual.
+- [x] Desktop and pgAdmin-container database connections pass using their documented addresses. GUI steps remain manual.
+- [x] README documents startup, configuration, demo login, verification, and an API example.

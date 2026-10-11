@@ -4,7 +4,7 @@
 
 Reviewed [faiyazsadi/WebApp](https://github.com/faiyazsadi/WebApp) at revision `fec1130`. Its [POM](https://github.com/faiyazsadi/WebApp/blob/fec1130fd7e2fce6255f7deb9e60c11d18c5a624/pom.xml) uses Java 17, Spring Boot 3.4.2, Maven, JPA, PostgreSQL, and Thymeleaf. Its Java packages separate controllers, services, repositories, entities, DTOs, and configuration.
 
-Our project follows that Java target, Maven layout, constructor injection, and layered structure. It uses Spring Boot **3.5.16**, with the same Spring Boot 3 programming model. We will add JSON REST controllers, Spring Security, and all three roles to meet this assignment. The small frontend will call those APIs.
+Our project follows that Java target, Maven layout, constructor injection, and layered structure. It uses Spring Boot **3.5.16**, with the same Spring Boot 3 programming model. JSON REST controllers, Spring Security, and all three roles meet this assignment; the small frontend calls those APIs.
 
 The normal Java `main()` method runs in IntelliJ's **Application** configuration; special Spring or Docker IDE integrations are not required. Maven supplies dependencies. This follows JetBrains' [Maven import](https://www.jetbrains.com/help/idea/import-project-or-module-wizard.html) and [Java application run](https://www.jetbrains.com/help/idea/run-debug-configuration-java-application.html) workflows.
 
@@ -17,7 +17,7 @@ Requirements: JDK 17 or 21, IntelliJ IDEA, Docker Desktop/Engine with Compose, a
 3. Copy `.env.example` to `.env` in the project root. On macOS/Linux: `cp .env.example .env`; in Windows PowerShell: `Copy-Item .env.example .env`.
 4. In IntelliJ's terminal, run `docker compose up -d --wait db`. Only the database starts.
 5. Select the shared **University Management** run configuration and click Run. Alternatively, open `src/main/java/com/kuet/ums/UniversityManagementApplication.java` and run its `main()` method.
-6. Open `http://localhost:8080/actuator/health`. Expected result: `{"status":"UP"}`.
+6. Open `http://localhost:8080` and sign in using a [demo account](../README.md#demo-accounts). Health is available at `/actuator/health`.
 
 The working directory must be the project root; the shared configuration sets this. The application explicitly imports `.env` as a properties file, so no environment-file plugin is needed. Use plain `KEY=value` entries without quotes or `export`.
 
@@ -38,6 +38,8 @@ Ports are configurable through `.env`. If 8080 or 15432 is occupied, change `POR
 
 To browse `public.user_accounts` in IntelliJ's Database window or pgAdmin, follow [Database access](DATABASE.md). The app runs independently of the chosen database viewer.
 
-## Current boundary
+## Tests and verified run path
 
-The main class, Maven Wrapper, shared run configuration, initial database migration, health endpoint, and Docker packaging are present. **The management APIs, login/RBAC, demo accounts, and UI are still to be implemented.** Opening `/` currently does not show a management page.
+Right-click `src/test/java/com/kuet/ums/AccountApiTest.java` and run it, or run `./mvnw verify` in the terminal. Docker must be running; Testcontainers uses a separate temporary PostgreSQL database and does not erase your app's database.
+
+Direct Java main-class startup and the full HTTP smoke test passed against PostgreSQL. Docker packaging passed under Java 17. IntelliJ's GUI import/run clicks have not been exercised here; the shared run configuration uses the verified main class and project-root working directory.

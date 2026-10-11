@@ -10,7 +10,7 @@ Copy `.env.example` to `.env` once, then run:
 docker compose up -d --wait db
 ```
 
-Run the Spring Boot app once to apply the Flyway migration. The foundation creates `public.user_accounts` and `public.flyway_schema_history`; account records remain empty until account management is implemented.
+Run the Spring Boot app once to apply the Flyway migrations. They create `public.user_accounts`, its role/ID index, and `public.flyway_schema_history`. The default demo profile inserts one account per role when the account table is empty; API and UI changes are visible in the same table.
 
 | Connection field | IntelliJ / desktop pgAdmin / other local client | pgAdmin running in Compose |
 |---|---|---|
