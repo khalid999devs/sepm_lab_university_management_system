@@ -32,3 +32,14 @@ The lab reference uses Java 17 and Spring Boot 3. Our project now targets **Java
 - Port 5432 was already occupied; the project uses configurable port **15432** for the local database connection.
 
 Follow [the IntelliJ guide](INTELLIJ.md) to open and run the project. CRUD, login/RBAC, demo accounts, the UI, and feature tests are the next implementation step.
+
+## Database viewer checks
+
+- Added optional pgAdmin 9.18 through Compose's `tools` profile, with persistent viewer settings and localhost port 5050.
+- Fresh app/database/pgAdmin startup passed; the app returned `{"status":"UP"}` and pgAdmin served its login page over HTTP.
+- A desktop PostgreSQL client authenticated through `localhost:15432` and listed the project tables.
+- The PostgreSQL driver inside pgAdmin authenticated through `db:5432` and listed `user_accounts` and `flyway_schema_history`.
+- GUI clicks were not exercised because no browser session was connected. The tested connection values and manual steps are in [Database access](DATABASE.md).
+- Removed the isolated verification stack and its temporary volumes after checking both connection paths.
+
+REST method semantics, status codes, request fields, creation headers, and response examples are documented in [the specification](SPECIFICATION.md). CRUD endpoints remain to be implemented and tested against that contract.

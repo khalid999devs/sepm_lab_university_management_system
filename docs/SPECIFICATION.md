@@ -1,5 +1,7 @@
 # Build Specification
 
+**Status:** the runnable foundation and database migration are present. The CRUD, security, and UI behavior below is the implementation contract.
+
 ## 1. Problem statement
 
 Build a University Management System for Admin, Teacher, and Student accounts. Authenticated users create, read, update, and delete records according to their role. Provide REST APIs, hashed passwords, server-enforced permissions, and Docker Compose startup.
@@ -90,6 +92,30 @@ Replace `{resource}` with `admins`, `teachers`, or `students`: **15 CRUD endpoin
 
 Create/update bodies use JSON. Unknown IDs return `404`; updates never create records.
 
+**REST rules:**
+
+- Use plural resource nouns and HTTP methods; CRUD URLs contain no action names.
+- `GET` reads without changing records. `GET` and `DELETE` have no request body.
+- `POST` creates a server-generated ID and returns its resource URL in `Location`.
+- `PUT` replaces the writable profile: both `fullName` and `email` are required; an omitted write-only password preserves the credential. Repeating the request has the same logical result.
+- `DELETE` leaves the record absent. A repeated delete returns `404`; it remains idempotent because the record stays absent.
+- Require `Content-Type: application/json` for CRUD writes. Return JSON for responses with a body; `204` has no body.
+- Treat `id` and `role` as server-managed fields; reject them in write bodies. A permitted collection lookup includes its fixed role.
+
+These method/status choices follow [HTTP semantics, RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#section-9).
+
+Example `POST /api/teachers` body:
+
+```json
+{"fullName":"Demo Teacher","email":"teacher@example.com","password":"DemoPass123"}
+```
+
+Success: `201 Created`, `Location: /api/teachers/1`, and:
+
+```json
+{"id":1,"fullName":"Demo Teacher","email":"teacher@example.com","role":"TEACHER"}
+```
+
 Use Spring Security form login with JSON success/failure handlers:
 
 | Method | Route | Contract |
@@ -109,7 +135,9 @@ JSON errors contain `status`, `code`, `message`, and validation field details wh
 | `401` | Missing/expired login or incorrect credentials |
 | `403` | Wrong role or missing/invalid CSRF token |
 | `404` | Record absent from the permitted collection |
+| `405` | Unsupported method; include the `Allow` header |
 | `409` | Duplicate email or attempted deletion of the final admin |
+| `415` | Unsupported request content type |
 
 ## 7. Security and initial accounts
 
@@ -133,6 +161,7 @@ Deliver a multi-stage `Dockerfile`: Maven Wrapper build, Java 17 runtime, non-ro
 
 - `app`: serves the UI and API at `http://localhost:8080`.
 - `db`: PostgreSQL with a named volume and `pg_isready` health check. The app waits for database health, following [Compose startup guidance](https://docs.docker.com/compose/how-tos/startup-order/).
+- Optional `pgadmin`: a browser database viewer at `http://localhost:5050`, enabled through the `tools` profile. IntelliJ and desktop PostgreSQL clients use the same database; see [Database access](DATABASE.md).
 
 Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the app against `localhost:15432`; Docker runs it against `db:5432`. Both read the same `.env` configuration. Exclude secrets, Git metadata, and build output through `.dockerignore`.
 
@@ -141,10 +170,12 @@ Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the ap
 **Finished when:**
 
 - [ ] All 15 endpoints return correct JSON/statuses.
+- [ ] Create returns `Location`; GET is read-only; PUT requires a complete writable profile; DELETE returns an empty `204` response.
 - [ ] Tests cover every role-resource permission pair and unauthenticated requests.
 - [ ] Login/logout work; passwords are hashed and never returned.
 - [ ] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and final-admin protection work.
 - [ ] The UI supports permitted CRUD and clear errors.
 - [ ] `docker compose up --build` works from a fresh checkout; restarts preserve records.
 - [ ] IntelliJ imports `pom.xml` with JDK 17 and runs the main class against the database; both run modes use the same application code.
+- [ ] IntelliJ/desktop clients can inspect `localhost:15432`; browser pgAdmin can inspect `db:5432`.
 - [ ] README documents startup, configuration, demo login, and an API example.

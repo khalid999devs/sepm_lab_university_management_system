@@ -10,10 +10,10 @@ The normal Java `main()` method runs in IntelliJ's **Application** configuration
 
 ## Run in IntelliJ
 
-Requirements: JDK 17, IntelliJ IDEA, Docker Desktop/Engine with Compose, and internet access for the first dependency download.
+Requirements: JDK 17 or 21, IntelliJ IDEA, Docker Desktop/Engine with Compose, and internet access for the first dependency download. The project targets Java 17 for lab compatibility; JDK 21 can build and run it too.
 
 1. Open the project folder or `pom.xml`; import it as a **Maven** project and let dependencies load.
-2. Under **Project Structure → Project SDK**, select/download **JDK 17**. Use it for Maven importing/running too.
+2. Under **Project Structure → Project SDK**, select/download **JDK 17** or **21**. Use the same JDK for Maven importing/running.
 3. Copy `.env.example` to `.env` in the project root. On macOS/Linux: `cp .env.example .env`; in Windows PowerShell: `Copy-Item .env.example .env`.
 4. In IntelliJ's terminal, run `docker compose up -d --wait db`. Only the database starts.
 5. Select the shared **University Management** run configuration and click Run. Alternatively, open `src/main/java/com/kuet/ums/UniversityManagementApplication.java` and run its `main()` method.
@@ -27,7 +27,7 @@ If the shared configuration has an unresolved module, choose `university-managem
 
 - **Terminal:** after starting `db`, run `./mvnw spring-boot:run`; on Windows, use `.\mvnw.cmd spring-boot:run`.
 - **All Docker:** stop the IntelliJ application first, then run `docker compose up --build`.
-- **Stop containers:** `docker compose down`. This preserves the database volume.
+- **Stop containers:** `docker compose --profile tools down`. This preserves database and pgAdmin volumes.
 
 | App runs in | Database address | Same application code |
 |---|---|---|
@@ -35,6 +35,8 @@ If the shared configuration has an unresolved module, choose `university-managem
 | Docker Compose | `db:5432` | Yes |
 
 Ports are configurable through `.env`. If 8080 or 15432 is occupied, change `PORT` or `DB_PORT`; use the chosen app port in the browser. Keep database credentials consistent with its existing volume.
+
+To browse `public.user_accounts` in IntelliJ's Database window or pgAdmin, follow [Database access](DATABASE.md). The app runs independently of the chosen database viewer.
 
 ## Current boundary
 
