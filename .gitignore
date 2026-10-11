@@ -4,6 +4,7 @@ build/
 .gradle/
 *.class
 *.log
+__pycache__/
 
 # Local credentials
 .env

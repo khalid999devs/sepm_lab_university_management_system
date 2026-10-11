@@ -300,6 +300,14 @@ class AccountApiTest {
         assertThat(accounts.count()).isEqualTo(2);
     }
 
+    @Test
+    void pagesAndAssetsAreServedWithoutAnAuthenticatedSession() throws Exception {
+        mvc.perform(get("/")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login.html"));
+        for (String path : List.of("/login.html", "/management.html", "/css/styles.css", "/js/api.js", "/js/login.js", "/js/management.js", "/favicon.svg")) {
+            mvc.perform(get(path)).andExpect(status().isOk()).andExpect(header().exists("Content-Security-Policy"));
+        }
+    }
+
     private MockHttpSession login(Role role) throws Exception {
         MvcResult anonymous = mvc.perform(get("/api/auth/csrf")).andReturn();
         MockHttpSession session = (MockHttpSession) anonymous.getRequest().getSession(false);

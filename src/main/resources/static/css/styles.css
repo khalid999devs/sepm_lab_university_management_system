@@ -1,0 +1,99 @@
+:root {
+    color-scheme: light;
+    --ink: #202b35;
+    --muted: #65727e;
+    --border: #e1e6e9;
+    --accent: #176858;
+    --accent-dark: #105145;
+    --danger: #b03932;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink);
+    background: #f8faf9;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 2.2rem; line-height: 1.25; letter-spacing: -.045em; font-weight: 650; }
+h2 { font-size: 1.2rem; font-weight: 600; letter-spacing: -.02em; }
+h3 { font-size: 1rem; font-weight: 600; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: wait; opacity: .6; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid #7db9ad; outline-offset: 3px; }
+.muted { color: var(--muted); }
+.eyebrow { color: var(--muted); font-size: .71rem; font-weight: 650; letter-spacing: .13em; margin-bottom: 12px; }
+.brand { display: inline-flex; align-items: center; gap: 12px; font-size: .95rem; font-weight: 600; text-decoration: none; }
+.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; background: var(--accent); color: white; border-radius: 8px; font-size: 19px; }
+.button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; padding: 9px 15px; min-height: 40px; border: 1px solid #d5dde0; border-radius: 6px; background: white; color: var(--ink); font-size: .88rem; font-weight: 550; white-space: nowrap; }
+.button:hover:not(:disabled) { background: #f1f5f3; }
+.button.primary { border-color: var(--accent); background: var(--accent); color: white; }
+.button.primary:hover:not(:disabled) { background: var(--accent-dark); }
+.button.danger { border-color: var(--danger); background: var(--danger); color: white; }
+.button.danger:hover:not(:disabled) { background: #902d27; }
+.button.subtle { border-color: transparent; background: transparent; }
+.notice { margin-bottom: 22px; padding: 12px 15px; border: 1px solid var(--border); border-radius: 6px; background: white; font-size: .9rem; }
+.notice.error { color: #8e302c; background: #fff7f6; border-color: #efd1ce; }
+.notice.success { color: var(--accent-dark); background: #eff8f4; border-color: #c9e3d9; }
+label { display: block; font-size: .87rem; font-weight: 550; margin-top: 18px; margin-bottom: 7px; }
+input { width: 100%; border: 1px solid #cfd8dc; border-radius: 6px; padding: 10px 12px; background: white; color: var(--ink); min-height: 44px; }
+input::placeholder { color: #8b969e; }
+input[aria-invalid="true"] { border-color: var(--danger); }
+.field-hint, .field-error { font-size: .8rem; margin-top: 6px; }
+.field-hint { color: var(--muted); }
+.field-error { color: var(--danger); }
+.login-page { min-height: 100dvh; display: grid; place-items: center; padding: 30px 20px; }
+.login-card { width: 100%; max-width: 440px; padding: 36px; background: white; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 35px #1c493807; }
+.login-heading { margin: 38px 0 26px; }
+.login-heading h1 { font-size: 2rem; margin-bottom: 10px; }
+.login-heading .muted { font-size: .9rem; }
+.login-submit { width: 100%; margin-top: 27px; min-height: 44px; }
+.login-footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 28px; }
+.site-header { background: white; border-bottom: 1px solid var(--border); }
+.header-inner { max-width: 1160px; margin: auto; min-height: 82px; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.session { display: flex; align-items: center; gap: 12px; font-size: .86rem; }
+.badge { padding: 3px 9px; font-size: .72rem; border-radius: 4px; background: #eaf4ef; color: var(--accent-dark); }
+.workspace { max-width: 1160px; margin: auto; padding: 48px 30px 70px; }
+.page-heading { margin-bottom: 32px; }
+.page-heading .muted { margin-top: 10px; font-size: .94rem; }
+.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); padding: 12px 0; font-size: .91rem; }
+.tab[aria-current="page"] { border-bottom-color: var(--accent); color: var(--accent); font-weight: 600; }
+.table-panel { border: 1px solid var(--border); border-radius: 9px; background: white; overflow: hidden; }
+.panel-toolbar { padding: 23px 26px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.record-count { font-size: .8rem; margin-top: 3px; }
+.toolbar-actions { display: flex; gap: 9px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: .9rem; }
+th { padding: 12px 26px; color: var(--muted); background: #fafcfb; font-size: .75rem; font-weight: 550; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+td { padding: 17px 26px; border-bottom: 1px solid #edf0f2; overflow-wrap: anywhere; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 550; }
+.actions-heading { text-align: right; }
+.row-actions { display: flex; justify-content: flex-end; gap: 14px; }
+.text-button { font-size: .8rem; border: 0; background: transparent; padding: 5px 0; color: var(--accent); }
+.text-button:hover { text-decoration: underline; }
+.text-button.danger-text { color: var(--danger); }
+.empty-state { padding: 48px 24px; text-align: center; border-top: 1px solid var(--border); }
+.empty-state p { font-size: .88rem; margin-top: 7px; }
+dialog { width: min(460px, calc(100% - 32px)); padding: 28px; color: var(--ink); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 20px 70px #18302725; }
+dialog::backdrop { background: #182c3560; }
+.dialog-heading { margin-bottom: 22px; }
+.dialog-heading .muted { font-size: .88rem; margin-top: 7px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 28px; }
+@media (max-width: 700px) {
+    .header-inner { padding: 16px 20px; flex-wrap: wrap; }
+    .session { width: 100%; }
+    .session .button { margin-left: auto; }
+    .workspace { padding: 32px 20px 50px; }
+    .panel-toolbar { padding: 19px; flex-wrap: wrap; }
+    th, td { padding-left: 19px; padding-right: 19px; }
+    table { min-width: 530px; }
+}
+@media (max-width: 420px) {
+    .login-card { padding: 26px; }
+    .login-card .brand { font-size: .85rem; }
+}
