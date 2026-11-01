@@ -7,14 +7,17 @@ if (new URLSearchParams(location.search).has('expired')) {
     showNotice(status, 'Your session has ended. Please sign in again.');
 }
 
-form.addEventListener('submit', async event => {
+form.addEventListener('submit', async (event) => {
     event.preventDefault();
     button.disabled = true;
     button.textContent = 'Signing in…';
     showNotice(status, '');
     try {
         await refreshCsrf();
-        await request('/api/auth/login', { method: 'POST', body: new URLSearchParams(new FormData(form)) });
+        await request('/api/auth/login', {
+            method: 'POST',
+            body: new URLSearchParams(new FormData(form))
+        });
         location.replace('/management.html');
     } catch (error) {
         showNotice(status, error.message, 'error');
@@ -27,5 +30,7 @@ try {
     await request('/api/auth/me');
     location.replace('/management.html');
 } catch (error) {
-    if (error.status !== 401) showNotice(status, error.message, 'error');
+    if (error.status !== 401) {
+        showNotice(status, error.message, 'error');
+    }
 }

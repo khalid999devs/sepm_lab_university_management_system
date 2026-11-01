@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 100
+
+[*.java]
+ij_java_continuation_indent_size = 4
+ij_java_keep_simple_methods_in_one_line = false
+ij_java_keep_simple_blocks_in_one_line = false
+ij_java_keep_simple_lambdas_in_one_line = false
+ij_java_keep_control_statement_in_one_line = false
+ij_java_blank_lines_after_class_header = 1
+ij_java_blank_lines_around_method = 1
+ij_java_blank_lines_around_field = 1
+
+[*.{yaml,yml,json}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[mvnw.cmd]
+end_of_line = crlf

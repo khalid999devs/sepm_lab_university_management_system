@@ -1,0 +1,12 @@
+.git/
+.idea/
+target/
+build/
+.env
+.env.*
+mvnw
+mvnw.cmd
+.mvn/
+
+# Applied Flyway migrations have checksums and must remain unchanged.
+src/main/resources/db/migration/

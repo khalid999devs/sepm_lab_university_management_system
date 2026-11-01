@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "user_accounts")
 public class UserAccount {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,7 +25,7 @@ public class UserAccount {
     @Column(nullable = false, columnDefinition = "text")
     private Role role;
 
-    protected UserAccount() { }
+    protected UserAccount() {}
 
     public UserAccount(String fullName, String email, String passwordHash, Role role) {
         this.fullName = fullName;
@@ -33,12 +34,26 @@ public class UserAccount {
         this.role = role;
     }
 
-    public Long getId() { return id; }
-    public String getFullName() { return fullName; }
-    public String getEmail() { return email; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
     @JsonIgnore
-    public String getPasswordHash() { return passwordHash; }
-    public Role getRole() { return role; }
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public Role getRole() {
+        return role;
+    }
 
     public void updateProfile(String fullName, String email) {
         this.fullName = fullName;

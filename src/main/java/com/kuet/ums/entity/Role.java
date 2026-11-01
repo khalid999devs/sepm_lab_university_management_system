@@ -1,5 +1,7 @@
 package com.kuet.ums.entity;
 
 public enum Role {
-    ADMIN, TEACHER, STUDENT
+    ADMIN,
+    TEACHER,
+    STUDENT
 }

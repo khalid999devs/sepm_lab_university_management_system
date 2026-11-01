@@ -21,9 +21,14 @@ if ! docker info > /dev/null 2>&1; then
     docker desktop start
     ready=false
     for attempt in {1..60}; do
-        if docker info > /dev/null 2>&1; then ready=true; break; fi
+        if docker info > /dev/null 2>&1; then
+            ready=true
+            break
+        fi
+
         sleep 1
     done
+
     if [[ "$ready" != true ]]; then
         print -u2 'Docker is not ready. Start Docker Desktop and try again.'
         exit 1
@@ -35,8 +40,11 @@ docker compose up -d --wait db
 
 project_port=8080
 while IFS='=' read -r key value; do
-    if [[ "$key" == PORT ]]; then project_port="$value"; fi
+    if [[ "$key" == PORT ]]; then
+        project_port="$value"
+    fi
 done < .env
+
 if lsof -nP -iTCP:"$project_port" -sTCP:LISTEN > /dev/null 2>&1; then
     print -u2 "Port $project_port is in use. Stop the previous Java run before starting another."
     exit 1
