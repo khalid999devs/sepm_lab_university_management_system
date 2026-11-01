@@ -64,3 +64,43 @@ curl -i -X POST -b /tmp/ums-cookies \
 ```
 
 Expected: `204`. Protected requests with that old session then return `401`. Refresh the CSRF token before another login. The full method and permission tables are in [the specification](SPECIFICATION.md).
+
+## Academic resources
+
+All routes below require a session; writes also require a fresh CSRF token. Responses use the status conventions in [the specification](SPECIFICATION.md).
+
+| Resource | Request fields | Response fields |
+|---|---|---|
+| Course | `code`, `title`, `credits`, `capacity`, `teacherId` | `id`, request fields, `teacherName`, `enrolledCount` |
+| Enrollment | `courseId`; admin must also supply `studentId` | `id`, `courseId`, `courseCode`, `courseTitle`, `credits`, `teacherName`, `studentId`, `studentName`, `studentEmail`, `enrolledAt` |
+| Notice | `title`, `body` | `id`, `title`, `body`, `publishedAt`, `authorName` |
+
+Courses and notices support collection GET/POST and record GET/PUT/DELETE. Enrollments support collection GET/POST and record GET/DELETE; withdrawal removes an enrollment rather than updating it.
+
+**Course creation (Admin):**
+
+```json
+{"code":"CSE 3230","title":"Web Programming Laboratory","credits":2,"capacity":40,"teacherId":2}
+```
+
+POST to `/api/courses`. Substitute an existing teacher ID. Code is trimmed/uppercased; duplicate code returns `409`. PUT uses the same complete writable fields.
+
+**Enrollment (Student):**
+
+```json
+{"courseId":1}
+```
+
+POST to `/api/enrollments`. The server uses the signed-in student; another `studentId` returns `403`. Admins use `{"courseId":1,"studentId":3}`. Duplicate registration/full capacity returns `409`. DELETE `/api/enrollments/{id}` withdraws the student and frees the seat.
+
+GET `/api/courses` returns the catalog for admins/students and assigned courses for teachers. GET `/api/enrollments` returns all registrations for admins, assigned rosters for teachers, and only personal registrations for students. Private record IDs return `404`.
+
+**Notice publication (Admin):**
+
+```json
+{"title":"Course registration","body":"Browse the course catalog to register for your courses."}
+```
+
+POST to `/api/notices`. Every signed-in role can read notices, newest first; only admins can publish/edit/delete. Publication time and author are server-managed. Notice text is plain text.
+
+Deleting a course with enrollments or an account with academic dependencies returns `409`. Withdraw enrollments/reassign courses first. A notice remains available if its author account is removed.

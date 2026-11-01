@@ -1,5 +1,7 @@
 # Dashboard extension plan
 
+**Implemented:** the backend, role dashboards, and automated checks below are complete. Browser rendering and IntelliJ clicks remain manual presentation checks; see [SETUP.md](SETUP.md).
+
 Keep the lab's account CRUD, security, Java 17 target, and IntelliJ main-class run configuration. Add three small academic resources using the same layered design.
 
 ## What each role gets

@@ -1,35 +1,36 @@
-# Local Setup Report
+# Local verification report
 
-Checked on **11 October 2026**, Asia/Dhaka.
+Checked on **1 November 2026**, Asia/Dhaka. This extends the original account-management build.
 
-| Component | Result |
+| Component | Setup |
 |---|---|
-| Git | Local repository on `main` with commits at implementation checkpoints |
 | Java | Host Corretto 23.0.2; project targets Java 17; Docker uses Temurin 17 |
-| Maven | Wrapper 3.9.12; no global Maven installation required |
-| Docker | CLI/engine 28.4.0; Compose v2.39.4-desktop.1; ARM64 |
-| PostgreSQL / pgAdmin | PostgreSQL 17; optional pgAdmin 9.18 |
-| Ports | App 8080, PostgreSQL 15432, pgAdmin 5050; localhost bindings |
+| Build | Maven Wrapper 3.9.12; Spring Boot 3.5.16; no frontend build step |
+| Database | PostgreSQL 17; Flyway V1–V3; Hibernate schema validation |
+| Docker | Engine 28.4.0; Compose with persistent named volumes |
+| Local ports | App 8080, database 15432, optional pgAdmin 5050 |
+| IntelliJ | Standard Maven import and shared Application configuration; project-root working directory |
 
-## Automated verification
+## Checks performed
 
-- `./mvnw verify`: **41 tests, 0 failures, 0 errors, 0 skipped**, using an isolated PostgreSQL Testcontainers database and both Flyway migrations.
-- Tests cover all nine role/resource pairs, personal ownership, admin-only create/delete, direct service authorization, anonymous access, response fields/statuses, validation, email uniqueness, CSRF, login/logout, password updates, deleted sessions, and concurrent final-admin deletion.
-- `python3 scripts/smoke_test.py`: passed against the Docker app and direct Java main-class run. Checks pages, cookies, all role logins, personal ownership, admin CRUD, and logout.
-- Fresh Docker image/stack startup passed. The app runs as non-root user `ums`.
-- Container recreation preserved the same account records. Switching to the direct main-class run preserved them too; demo accounts were not duplicated.
-- JavaScript syntax checks and Git whitespace checks passed.
+- `./mvnw verify`: **51 tests, 0 failures, 0 errors, 0 skipped**, using isolated PostgreSQL Testcontainers databases and real migrations.
+- Account regression coverage: all role/resource pairs, own-profile restrictions, CRUD, validation, BCrypt, CSRF, sessions, deleted accounts, and concurrent final-admin deletion.
+- Academic coverage: course/notice CRUD, teacher assignments and roster privacy, student ownership, duplicate/full-course registration, concurrent last-seat enrollment, capacity reduction, dependent deletion, author deletion, and strict integer validation.
+- `python3 scripts/smoke_test.py`: live HTTP checks against direct Java main-class and Docker runs; temporary accounts/courses/enrollments/notices are removed afterward.
+- A temporary DOM harness executed the served JavaScript against the real API: admin forms/search, teacher roster, student enrollment/withdrawal/profile, private views, safe text rendering, and server error feedback. This checks behavior, not browser layout.
+- Fresh Docker build/startup: Java 17 non-root runtime, all migrations, three demo courses, one enrollment, and one notice. Container recreation preserved the demo records without duplication.
+- JavaScript syntax, Python compilation, Markdown local links, and Git whitespace checks passed.
 
-## IntelliJ and database access
+## IntelliJ and data preservation
 
-The Maven layout, Java 17 bytecode target, project-root working directory, and shared Application run configuration are ready for IntelliJ. Direct `UniversityManagementApplication.main()` startup passed the full HTTP smoke test; no Spring-specific IDE integration is required.
+Direct `UniversityManagementApplication.main()` startup passed the live HTTP workflow using the project database at `localhost:15432`. The shared IDE configuration uses the same main class, module classpath, and project-root working directory. No Spring-specific IDE integration or environment-file plugin is required.
 
-A local PostgreSQL client connected through `localhost:15432`. The PostgreSQL driver inside the pgAdmin container connected through `db:5432`; both could inspect the project tables. pgAdmin served its login page successfully.
+The migration adds academic tables without deleting existing accounts or changing passwords. Fresh demo data is inserted only when the account table is empty. Existing databases may have empty academic lists until an admin creates courses/notices.
 
-The **University Management** server is now registered for `admin@example.com`. Automatic import of the mounted server definition was verified on a fresh pgAdmin volume. The existing PostgreSQL and pgAdmin volumes were preserved during this update.
+The previously configured pgAdmin server still uses `db:5432`; desktop database clients use `localhost:15432`. See [DATABASE.md](DATABASE.md).
 
-## Verification limits and current state
+## Limits and final running state
 
-IntelliJ import/run clicks, database viewer dialogs, and visual/interactive UI clicks were not exercised: no browser session was connected. Follow [the IntelliJ guide](INTELLIJ.md), [database guide](DATABASE.md), and [lab walkthrough](DEMO.md) for those manual checks.
+Actual browser rendering, responsive screenshots, keyboard/focus behavior, and IntelliJ import/Run-button clicks remain manual checks. Browser automation was unavailable and a native browser review attempt timed out. Follow [DEMO.md](DEMO.md) before the lab.
 
-Temporary verification containers, volumes, and the direct Java process were removed. The normal project Compose stack is left running for local review at `http://localhost:8080`; pgAdmin is at `http://localhost:5050`. Stop it with `docker compose --profile tools down`; named volumes preserve your data.
+Temporary verification containers/volumes and the direct Java verification process were removed. The normal Compose application and database are running at `http://localhost:8080`. For IntelliJ, run `docker compose stop app`, keep/start `db`, and run **University Management**. For shutdown, `docker compose --profile tools down` preserves database and pgAdmin data.

@@ -15,7 +15,7 @@ Requirements: JDK 17 or 21, IntelliJ IDEA, Docker Desktop/Engine with Compose, a
 1. Open the project folder or `pom.xml`; import it as a **Maven** project and let dependencies load.
 2. Under **Project Structure → Project SDK**, select/download **JDK 17** or **21**. Use the same JDK for Maven importing/running.
 3. Copy `.env.example` to `.env` in the project root. On macOS/Linux: `cp .env.example .env`; in Windows PowerShell: `Copy-Item .env.example .env`.
-4. In IntelliJ's terminal, run `docker compose up -d --wait db`. Only the database starts.
+4. Stop any terminal Java run. In IntelliJ's terminal, run `docker compose stop app`, then `docker compose up -d --wait db`. The application port must be free; only the database is needed for the IDE run.
 5. Select the shared **University Management** run configuration and click Run. Alternatively, open `src/main/java/com/kuet/ums/UniversityManagementApplication.java` and run its `main()` method.
 6. Open `http://localhost:8080` and sign in using a [demo account](../README.md#demo-accounts). Health is available at `/actuator/health`.
 

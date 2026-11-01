@@ -1,182 +1,107 @@
-# Build Specification
+# Build specification
 
-**Status:** backend, security, demo accounts, minimal UI, and Docker setup are implemented. Automated API/startup checks pass; GUI verification limits are recorded in [the setup report](SETUP.md).
+## Problem and scope
 
-## 1. Problem statement
+Build a small University Management System for CSE 3230 Lab 4. Admins manage university accounts and courses; teachers review assigned courses and students; students manage their own course registrations. All roles have a personal profile and university notice board.
 
-Build a University Management System for Admin, Teacher, and Student accounts. Authenticated users create, read, update, and delete records according to their role. Provide REST APIs, hashed passwords, server-enforced permissions, and Docker Compose startup.
+The focus is REST conventions, backend design, Spring Security, persistent data, and a simple dashboard. Grades, attendance, fees, timetabling, and degree audits are outside this build. Enrollment credits are a current course total, not a transcript.
 
-**Goal:** demonstrate backend design through a small, clean web interface.
+The implementation plan is in [DASHBOARD_PLAN.md](DASHBOARD_PLAN.md); verification results and limits are in [SETUP.md](SETUP.md).
 
-**Scope:** account management only; courses, attendance, and grades are outside this lab.
+## Role permissions
 
-## 2. Permissions
-
-Admins manage every account. Teachers and students use a personal dashboard and can view/update only their own record. Account creation and deletion are admin-only.
-
-| Signed-in role | Admin records | Teacher records | Student records |
+| Resource / action | Admin | Teacher | Student |
 |---|---|---|---|
-| Admin | CRUD | CRUD | CRUD |
-| Teacher | Forbidden | Read/update own account | Forbidden |
-| Student | Forbidden | Forbidden | Read/update own account |
-| Guest | Forbidden | Forbidden | Forbidden |
+| Accounts | CRUD all three roles | Read/update own profile | Read/update own profile |
+| Courses | CRUD; assign teacher | Read assigned courses | Read catalog |
+| Enrollments | Read, enroll any student, withdraw | Read assigned course rosters | Read, enroll, withdraw self |
+| Notices | CRUD | Read | Read |
 
-The backend enforces ownership for direct API requests too. Another person's ID in the same collection returns `404`; teacher/student POST and DELETE requests return `403`, including self-deletion.
+Guests cannot access resource APIs. Same-role account IDs belonging to someone else return `404`; unrelated account collections return `403`. Teachers cannot browse the student directory, but can read names/emails in their assigned course rosters. Students cannot read classmates' enrollments. Direct API calls obey the same rules as the UI.
 
-## 3. Technology
+## Technology and design
 
-| Part | Choice | Purpose |
-|---|---|---|
-| Backend | Java 17 target, Spring Boot 3.5.16 | One executable application; aligns with the lab's Spring Boot 3 setup |
-| Build | Maven Wrapper | Build without installing Maven globally |
-| Persistence | PostgreSQL 17, Spring Data JPA | Persistent account records |
-| Schema | Flyway | Versioned database creation; JPA validates the schema |
-| Security | Spring Security, BCrypt, HTTP sessions | Login, logout, hashing, and role checks |
-| UI | HTML, CSS, vanilla JavaScript | Small pages served by the same application |
-| Verification | JUnit, MockMvc, Compose smoke test | CRUD, authentication, permissions, and startup |
-
-Java 17 is compatible with [Spring Boot 3.5.16](https://docs.spring.io/spring-boot/3.5/system-requirements.html); PostgreSQL 17 is [supported](https://www.postgresql.org/support/versioning/). Spring manages dependency versions. Use a standard Maven project that imports and runs in IntelliJ IDEA; see [the IntelliJ guide](INTELLIJ.md).
-
-## 4. Backend design and patterns
-
-One application, with this request path:
+Java 17 target (JDK 21 also works), Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, JPA, Flyway, and Spring Security. HTML/CSS/JavaScript are served by Spring Boot; no frontend toolchain is needed. Use [the shared IntelliJ Application configuration](INTELLIJ.md).
 
 ```mermaid
 flowchart LR
-    Client[Browser or API client] --> Security[Spring Security]
-    Security --> Controller[Admin / Teacher / Student controllers]
-    Controller --> Service[Shared account service]
-    Service --> Repository[Account repository]
-    Repository --> Database[(PostgreSQL)]
+    Browser[Dashboard / API client] --> Security[Spring Security]
+    Security --> Controllers[REST controllers]
+    Controllers --> Services[Services: rules and transactions]
+    Services --> Repositories[Spring Data repositories]
+    Repositories --> DB[(PostgreSQL)]
 ```
 
-| Pattern | Responsibility |
+- **Layered architecture:** controllers own HTTP, services own business rules and transaction boundaries.
+- **Repository:** Spring Data handles queries; course and final-admin writes use targeted pessimistic locks.
+- **DTO:** request validation and explicit response fields keep entities and credentials out of public JSON.
+- **Dependency injection:** constructor injection connects components.
+- **Central error handling:** controller advice and security handlers return consistent JSON errors.
+
+The three account controllers reuse `AccountService`; `AccountAccess` enforces role/ownership inside services. Course, enrollment, and notice services have separate responsibilities. Queries scope teacher/student data before serializing it; entity graphs load related records, and one aggregate query supplies course enrollment counts.
+
+## Data model
+
+| Table | Main fields and rules |
 |---|---|
-| Layered architecture | Controllers handle HTTP; the service handles rules and transactions |
-| Repository | A Spring Data repository performs database access |
-| DTO | Separate request/response objects keep password hashes out of JSON |
-| Dependency injection | Constructor injection connects components and supports testing |
-| Central error handling | Controller advice handles application errors; security handlers format 401/403 responses |
+| `user_accounts` | Generated ID; trimmed name (2–100), normalized unique email (max 254), BCrypt hash, fixed role |
+| `courses` | Generated ID; unique uppercase code (2–20), title (2–150), credits (1–6), capacity (1–200), teacher FK |
+| `enrollments` | Generated ID; course FK, student FK, timestamp; unique `(course_id, student_id)` |
+| `notices` | Generated ID; title (2–150), body (2–3000), publication timestamp, nullable author FK |
 
-Three controllers pass a fixed role into one service. `AccountAccess` checks the authenticated role and stable account ID inside that service. Non-admin lists return only the signed-in account; record lookups require ownership and include the fixed collection role. Share one service and repository.
+Database constraints enforce required fields, ranges, uniqueness, and references. Services ensure assigned accounts have the correct role. Foreign keys have supporting indexes. Flyway V1–V3 create/extend the schema; Hibernate validates it. Existing volumes and account passwords are preserved.
 
-Under `com.kuet.ums`, use `controller/`, `service/`, `repository/`, `entity/`, and `dto/`, matching the lab's layered structure; add `security/`, `config/`, `exception/`, and `validation/`. Use explicit constructor injection. Pages: `src/main/resources/static/`.
+Enrollment locks the course row before checking capacity and inserting. Course edits/deletion use the same lock, preventing last-seat overbooking and capacity below enrollment count. Duplicate registration/full courses return `409`. A course with enrollments cannot be deleted. Withdraw/reassign dependencies before deleting student/teacher accounts. Notices survive author deletion and display “University office”.
 
-## 5. Data model
+## REST contract
 
-Each record is also a login account. Three REST resources share one `user_accounts` table with identical fields.
+**29 resource endpoints:** 15 account CRUD, 5 course CRUD, 4 enrollment, and 5 notice CRUD. Authentication has four additional routes.
 
-| Database field | Type | Rule |
+| Resource | Collection | Record |
 |---|---|---|
-| `id` | `bigint` identity | Generated primary key |
-| `full_name` | `text` | Required; trimmed, 2–100 characters |
-| `email` | `text` | Required, valid, lowercase, globally unique; API limit 254 characters |
-| `password_hash` | `text` | Required; BCrypt hash only |
-| `role` | `text` | Required; check constraint allows `ADMIN`, `TEACHER`, `STUDENT` |
+| Accounts: `admins`, `teachers`, `students` | `GET`, `POST /api/{resource}` | `GET`, `PUT`, `DELETE /api/{resource}/{id}` |
+| Courses | `GET`, `POST /api/courses` | `GET`, `PUT`, `DELETE /api/courses/{id}` |
+| Enrollments | `GET`, `POST /api/enrollments` | `GET`, `DELETE /api/enrollments/{id}` |
+| Notices | `GET`, `POST /api/notices` | `GET`, `PUT`, `DELETE /api/notices/{id}` |
 
-The database enforces uniqueness and required fields. The URL fixes the role; clients cannot change it. Creation requires a password: minimum 8 characters, maximum 72 UTF-8 bytes. Updates require `fullName` and `email`; omitting the password preserves its hash.
+- Plural resource nouns; HTTP methods express operations. GET never changes data.
+- JSON writes require `Content-Type: application/json`; unknown fields are rejected.
+- POST returns `201 Created`, JSON, and `Location`. GET/PUT return `200` JSON. DELETE returns empty `204`.
+- PUT requires all writable fields; omitted account password preserves the credential. Updates never create missing records. Notice edits preserve the original publication timestamp.
+- Lists are JSON arrays. Accounts sort by ID; courses by code; enrollments newest ID first; notices newest publication/ID first.
+- Missing or private IDs return `404`. Repeated DELETE returns `404` while the record remains absent.
 
-Responses contain `id`, `fullName`, `email`, and `role`; passwords/hashes never appear in responses or logs. Wrong-collection IDs return `404`.
+These choices follow [HTTP semantics](https://www.rfc-editor.org/rfc/rfc9110.html#section-9). Request examples and response fields are in [API.md](API.md).
 
-## 6. REST contract
-
-Replace `{resource}` with `admins`, `teachers`, or `students`: **15 CRUD endpoints**.
-
-| Method | Route | Success |
-|---|---|---|
-| POST | `/api/{resource}` | `201 Created`, JSON record, `Location` header |
-| GET | `/api/{resource}` | `200 OK`, JSON array ordered by ID; `[]` when empty |
-| GET | `/api/{resource}/{id}` | `200 OK`, JSON record |
-| PUT | `/api/{resource}/{id}` | `200 OK`, updated JSON record |
-| DELETE | `/api/{resource}/{id}` | `204 No Content`, empty body |
-
-Create/update bodies use JSON. Unknown or inaccessible IDs return `404`; updates never create records. Admins can use all methods. Teachers/students can GET their own collection/record and PUT their own record; POST and DELETE are admin-only.
-
-**REST rules:**
-
-- Use plural resource nouns and HTTP methods; CRUD URLs contain no action names.
-- `GET` reads without changing records. `GET` and `DELETE` have no request body.
-- `POST` creates a server-generated ID and returns its resource URL in `Location`.
-- `PUT` replaces the writable profile: both `fullName` and `email` are required; an omitted write-only password preserves the credential. Repeating the request has the same logical result.
-- `DELETE` leaves the record absent. A repeated delete returns `404`; it remains idempotent because the record stays absent.
-- Require `Content-Type: application/json` for CRUD writes. Return JSON for responses with a body; `204` has no body.
-- Treat `id` and `role` as server-managed fields; reject them in write bodies. A permitted collection lookup includes its fixed role.
-
-These method/status choices follow [HTTP semantics, RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#section-9).
-
-Example `POST /api/teachers` body:
-
-```json
-{"fullName":"Demo Teacher","email":"teacher@example.com","password":"DemoPass123"}
-```
-
-Success: `201 Created`, `Location: /api/teachers/1`, and:
-
-```json
-{"id":1,"fullName":"Demo Teacher","email":"teacher@example.com","role":"TEACHER"}
-```
-
-Use Spring Security form login with JSON success/failure handlers:
-
-| Method | Route | Contract |
-|---|---|---|
-| GET | `/api/auth/csrf` | Public; `200`, JSON token and header name |
-| POST | `/api/auth/login` | Form-encoded `email` and `password`; `200`, JSON identity and session cookie |
-| GET | `/api/auth/me` | Authenticated; `200`, JSON identity |
-| POST | `/api/auth/logout` | `204`; invalidates session and clears session cookie |
-
-All writes, including login/logout, require CSRF tokens. Fetch a fresh token after login/logout. CRUD bodies and responses are JSON; login input is form-encoded.
-
-JSON errors contain `status`, `code`, `message`, and validation field details when applicable.
-
-| Status | Meaning |
+| Error | Meaning |
 |---|---|
-| `400` | Invalid fields or malformed JSON |
-| `401` | Missing/expired login or incorrect credentials |
-| `403` | Wrong role, non-admin create/delete, or missing/invalid CSRF token |
-| `404` | Record absent from or inaccessible in the permitted collection |
-| `405` | Unsupported method; include the `Allow` header |
-| `409` | Duplicate email or attempted deletion of the final admin |
-| `415` | Unsupported request content type |
+| `400` | Invalid JSON/fields, invalid teacher/student assignment |
+| `401` | Missing/expired session or incorrect login |
+| `403` | Role denial, attempted student impersonation, invalid/missing CSRF |
+| `404` | Missing/private record |
+| `405` | Unsupported method, with `Allow` header |
+| `409` | Duplicate email/code/enrollment, full course, dependency, capacity conflict, final-admin deletion |
+| `415` | Unsupported content type |
 
-## 7. Security and initial accounts
+Errors contain `status`, `code`, `message`, and optional validation `fields`.
 
-- Enforce route permissions through Spring Security and role/ownership access through `AccountAccess` in the shared service. The browser never decides authorization.
-- Use server-side sessions, `HttpOnly`/`SameSite=Lax` cookies, BCrypt, and CSRF protection. Logout invalidates the session.
-- Sessions expire after 30 minutes of inactivity; the UI redirects to sign-in after `401`.
-- Check the signed-in account still exists on protected requests. Transactionally prevent deleting the final admin.
-- Seed one account per role on an empty database in the demo profile. Read passwords from environment variables and hash them; restarts preserve existing accounts.
-- Create accounts through authorized endpoints. Store credentials in ignored `.env`; document variables in `.env.example`.
+## Authentication and safety
 
-Use Spring's [password encoder](https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/password-encoder.html), [logout support](https://docs.spring.io/spring-security/reference/servlet/authentication/logout.html), and [CSRF protection](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html).
+| Route | Contract |
+|---|---|
+| `GET /api/auth/csrf` | Public token and header name |
+| `POST /api/auth/login` | Form-encoded email/password; JSON identity and session cookie |
+| `GET /api/auth/me` | Authenticated identity |
+| `POST /api/auth/logout` | Empty `204`; invalidates session and removes cookie |
 
-## 8. Minimal interface
+All writes, including login/logout, require CSRF. Fetch a fresh token after login/logout. Sessions expire after 30 idle minutes; cookies are `HttpOnly` / `SameSite=Lax`. Deleted accounts lose access on their next protected request. At least one admin must remain, including under concurrent deletion.
 
-Two pages: **login** and **dashboard**. Both dashboards have a header with name, role, and logout. Admins see three collection tabs and a name/email table with add/edit/delete actions. Teachers/students see their own profile card and an Edit profile form for name, email, and optional password. Admin deletion requires confirmation.
+Passwords require 8 characters and at most 72 UTF-8 bytes. They are write-only and stored as BCrypt hashes. No password/hash is returned in resource responses. Configuration lives in ignored `.env`; examples are in `.env.example`.
 
-White background, readable type, neutral borders, one accent color, consistent spacing, labelled inputs, and a responsive layout. Show loading, empty, success, and error states. Every record operation calls the REST API.
+The default `demo` profile seeds three accounts, three courses, one enrollment, and one notice **only when the account table is empty**. Existing databases are migrated without adding sample academic records or resetting user changes. An explicit non-demo profile disables seeding.
 
-## 9. Docker and completion
+## Dashboard and startup
 
-Deliver a multi-stage `Dockerfile`: Maven Wrapper build, Java 17 runtime, non-root user. `compose.yaml` starts:
+A shared responsive sidebar provides Overview, Courses, role-specific People/Enrollments, Notice board, and My profile. Summary cards show real data; lists support search and course filters. Forms have labels/validation, destructive operations require confirmation, and loading/empty/success/error states are visible. Content uses DOM text nodes rather than HTML interpolation.
 
-- `app`: serves the UI and API at `http://localhost:8080`.
-- `db`: PostgreSQL with a named volume and `pg_isready` health check. The app waits for database health, following [Compose startup guidance](https://docs.docker.com/compose/how-tos/startup-order/).
-- Optional `pgadmin`: a browser database viewer at `http://localhost:5050`, enabled through the `tools` profile. A mounted server definition registers **University Management** on first startup. IntelliJ and desktop PostgreSQL clients use the same database; see [Database access](DATABASE.md).
-
-Publish app port 8080 and database port 15432 on localhost. IntelliJ runs the app against `localhost:15432`; Docker runs it against `db:5432`. Both read the same `.env` configuration. Exclude secrets, Git metadata, and build output through `.dockerignore`.
-
-**Build order:** project and migration → shared CRUD service and three controllers → login/RBAC → minimal UI → Docker packaging → verification.
-
-**Completion checks:**
-
-- [x] All 15 endpoints return correct JSON/statuses.
-- [x] Create returns `Location`; GET is read-only; PUT requires a complete writable profile; DELETE returns an empty `204` response.
-- [x] Tests cover every role-resource permission pair, ownership, admin-only creation/deletion, and unauthenticated requests.
-- [x] Login/logout work; passwords are hashed and never returned.
-- [x] Validation, duplicate emails, wrong-collection IDs, deleted accounts, and concurrent final-admin protection work.
-- [x] The UI is implemented and its pages/assets are served. Manual click review is listed in [the lab walkthrough](DEMO.md).
-- [x] A fresh Compose build works; container recreation and switching app run modes preserve records.
-- [x] The shared IntelliJ run configuration uses the main class; direct main-class HTTP checks pass. IDE import/clicks remain manual.
-- [x] Desktop and pgAdmin-container database connections pass using their documented addresses. GUI steps remain manual.
-- [x] README documents startup, configuration, demo login, verification, and an API example.
+IntelliJ runs `UniversityManagementApplication.main()` with project-root working directory. Docker Compose supplies PostgreSQL at `localhost:15432`; the app is at `localhost:8080`. Optional pgAdmin is at `localhost:5050`, with a pre-registered server on fresh volumes. The multi-stage Dockerfile builds and runs on Java 17 as a non-root user. [Run guide](INTELLIJ.md) · [Database guide](DATABASE.md).

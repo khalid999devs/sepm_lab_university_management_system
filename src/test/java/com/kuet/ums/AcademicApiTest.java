@@ -1,6 +1,7 @@
 package com.kuet.ums;
 
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kuet.ums.dto.*;
 import com.kuet.ums.entity.*;
 import com.kuet.ums.exception.ApiException;
@@ -187,6 +188,10 @@ class AcademicApiTest {
         mvc.perform(post("/api/enrollments").with(user(principal(student))).with(csrf()).contentType("application/json").content(enrollmentBody(Long.MAX_VALUE, null))).andExpect(status().isNotFound());
         mvc.perform(post("/api/enrollments").with(user(principal(student))).with(csrf()).contentType("application/json").content("{}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.courseId").exists());
+        ObjectNode fractional = (ObjectNode) json.readTree(courseBody("CSE 3201", 3, 40, teacher.getId()));
+        fractional.put("credits", 2.5);
+        mvc.perform(post("/api/courses").with(user(actor)).with(csrf()).contentType("application/json").content(json.writeValueAsString(fractional)))
+                .andExpect(status().isBadRequest());
         mvc.perform(post("/api/notices").with(user(actor)).with(csrf()).contentType("application/json").content("{\"title\":\"Hi\",\"body\":\"Body\",\"authorId\":123}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/notices").with(user(actor)).with(csrf()).contentType("application/json").content(json.writeValueAsString(Map.of("title", " ", "body", " "))))

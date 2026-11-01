@@ -2,10 +2,17 @@
 
 CSE 3230 · Home task for Lab 4
 
-A small web application for managing Admin, Teacher, and Student accounts. The focus is backend design: REST CRUD, Spring Security, clear responsibilities, and Docker Compose, with a minimal interface.
+A small university portal with Admin, Teacher, and Student dashboards. It manages accounts, courses, student enrollments, and notices. The focus is backend design: REST, Spring Security, clear responsibilities, and Docker Compose.
 
-**Implemented:** 15 CRUD endpoints, session login/logout, BCrypt passwords, role and ownership permissions, validation, persistent storage, an admin directory, and personal dashboards.
+**Implemented:** 29 resource endpoints, session login/logout, BCrypt passwords, role/ownership permissions, course capacity checks, persistent PostgreSQL data, and three simple dashboards.
 
+| Dashboard | Main functions |
+|---|---|
+| Admin | Account directory, course CRUD/teacher assignment, student enrollments, notice CRUD |
+| Teacher | Assigned courses, student rosters, notices, own profile |
+| Student | Course catalog, enroll/withdraw self, enrolled credits, notices, own profile |
+
+- [Dashboard plan](docs/DASHBOARD_PLAN.md) — scope, permissions, and build order.
 - [Build specification](docs/SPECIFICATION.md) — problem, permissions, architecture, API, and completion criteria.
 - [Local setup report](docs/SETUP.md) — Java, Git, Docker, and verified checks.
 - [IntelliJ and lab reference](docs/INTELLIJ.md) — how your teacher opens/runs the project and how it follows the lab repository.
@@ -21,7 +28,7 @@ A small web application for managing Admin, Teacher, and Student accounts. The f
 
 Copy `.env.example` to `.env` once. Then choose a mode:
 
-- **IntelliJ:** open `pom.xml`, select JDK 17 or 21, run `docker compose up -d --wait db` in the terminal, then run the shared **University Management** configuration.
+- **IntelliJ:** open `pom.xml`, select JDK 17 or 21, stop any Docker app with `docker compose stop app`, run `docker compose up -d --wait db` in the terminal, then run the shared **University Management** configuration.
 - **Docker:** run `docker compose up --build` from the project folder.
 
 Open **http://localhost:8080** to sign in. Health: `http://localhost:8080/actuator/health` returns `{"status":"UP"}`. Use only one application run mode at a time to avoid a port conflict.
@@ -39,7 +46,7 @@ Enter the full email address; passwords are case-sensitive. When pgAdmin asks fo
 
 ## Demo accounts
 
-The default `demo` profile seeds these accounts only when the database is empty. Passwords come from `.env`; the example values are shown below.
+The default `demo` profile seeds these accounts, three courses, one enrollment, and one notice only when the account table is empty. Existing databases keep their accounts and academic records; use Admin to add courses if the new lists are empty. Passwords come from `.env`; the example values are shown below.
 
 | Role | Email | Example password / variable |
 |---|---|---|
@@ -51,9 +58,9 @@ Restarting preserves accounts and password changes. Changing a demo password var
 
 ## Backend design
 
-`controller → service → repository → PostgreSQL`. Three controllers fix the resource role; one service owns transactions and account rules. `AccountAccess` enforces ownership and admin-only writes in that service. Request/response DTOs keep credentials out of JSON. Spring Security enforces route access and CSRF; controller advice formats application errors. Components use constructor injection.
+`controller → service → repository → PostgreSQL`. Three account controllers fix the resource role and share one account service. Separate course, enrollment, and notice services own their rules and transactions. `AccountAccess` enforces ownership and admin-only writes in that service. Request/response DTOs keep credentials out of JSON. Spring Security enforces route access and CSRF; controller advice formats application errors. Components use constructor injection.
 
-The final admin cannot be deleted, including by concurrent requests. Deleted accounts lose access on their next protected request. `PUT` requires name and email; omitting its password preserves the credential.
+The final admin cannot be deleted, including by concurrent requests. Course-row locking prevents concurrent enrollment from overbooking the last seat. Enrolled courses and accounts with academic dependencies return `409` on deletion; withdraw/reassign first. Deleted accounts lose access on their next protected request. `PUT` requires name and email; omitting its password preserves the credential.
 
 ## Verify
 
@@ -63,7 +70,7 @@ With Docker running:
 ./mvnw verify
 ```
 
-On Windows, use `.\mvnw.cmd verify`. The 41 integration tests start an isolated PostgreSQL container, apply the real Flyway migrations, and check role/resource pairs, ownership, admin-only writes, CRUD, validation, CSRF, sessions, and concurrent admin deletion.
+On Windows, use `.\mvnw.cmd verify`. The 51 integration tests use isolated PostgreSQL containers and the real Flyway migrations. They check account CRUD, role/ownership boundaries, course/notice CRUD, private rosters, enrollment and capacity, dependent deletion, validation, CSRF, sessions, and concurrent enrollment/admin deletion.
 
 With the demo app running, optionally check its real HTTP endpoints:
 
@@ -71,4 +78,4 @@ With the demo app running, optionally check its real HTTP endpoints:
 python3 scripts/smoke_test.py
 ```
 
-This uses Python's standard library and removes the accounts it creates. Add `--base-url http://localhost:8081` if using a different app port. GUI clicks and IntelliJ import remain manual checks; see the [setup report](docs/SETUP.md).
+This uses Python's standard library and removes its temporary accounts, courses, enrollments, and notices. Add `--base-url http://localhost:8081` if using a different app port. GUI clicks and IntelliJ import remain manual checks; see the [setup report](docs/SETUP.md).

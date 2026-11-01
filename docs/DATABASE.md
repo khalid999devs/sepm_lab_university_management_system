@@ -10,7 +10,7 @@ Copy `.env.example` to `.env` once, then run:
 docker compose up -d --wait db
 ```
 
-Run the Spring Boot app once to apply the Flyway migrations. They create `public.user_accounts`, its role/ID index, and `public.flyway_schema_history`. The default demo profile inserts one account per role when the account table is empty; API and UI changes are visible in the same table.
+Run the Spring Boot app once to apply the Flyway migrations. V1–V3 create `public.user_accounts`, `public.courses`, `public.enrollments`, `public.notices`, their indexes, and `public.flyway_schema_history`. A fresh demo database includes three accounts, three courses, one enrollment, and one notice. Existing account data is preserved; API/UI changes appear in these tables.
 
 | Connection field | IntelliJ / desktop pgAdmin / other local client | pgAdmin running in Compose |
 |---|---|---|
@@ -47,7 +47,7 @@ Open `http://localhost:5050` and sign in with `PGADMIN_EMAIL` and `PGADMIN_PASSW
 1. Refresh pgAdmin, expand **Servers**, and open **University Management**. The server definition is imported automatically on a fresh volume.
 2. When asked for its database password, enter `DB_PASSWORD` from `.env` (example: `ums-local-demo`). The login password for pgAdmin is different.
 3. Expand **Servers → University Management → Databases → ums → Schemas → public → Tables**.
-4. Open `user_accounts` through **View/Edit Data → All Rows**, or use the Query Tool.
+4. Open `user_accounts` through **View/Edit Data → All Rows**, or use the Query Tool. Open `courses`, `enrollments`, and `notices` the same way.
 
 If **Servers** is empty on an older pgAdmin volume, register **University Management** manually with the Compose-client settings above, or import the supplied definition once:
 

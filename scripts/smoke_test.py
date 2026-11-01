@@ -67,6 +67,61 @@ def configuration():
     return values
 
 
+def academic_checks(admin, members, suffix):
+    created = []
+    enrollment_location = None
+    try:
+        identities = {}
+        clients = {}
+        for resource in ('teachers', 'students'):
+            email = f'academic-{resource}-{suffix}@ums.test'
+            status, headers, account = admin.call('/api/' + resource, 'POST', body={
+                'fullName': 'Academic Smoke Account', 'email': email, 'password': 'SmokePass123'
+            })
+            assert status == 201, 'Academic test account creation failed'
+            created.append(headers['Location'])
+            identities[resource] = account
+            clients[resource] = Client(admin.base_url)
+            clients[resource].login(email, 'SmokePass123')
+
+        status, headers, course = admin.call('/api/courses', 'POST', body={
+            'code': 'QA ' + suffix.upper(), 'title': 'Temporary Smoke Course',
+            'credits': 3, 'capacity': 1, 'teacherId': identities['teachers']['id']
+        })
+        assert status == 201, 'Course creation failed'
+        course_location = headers['Location']
+        created.append(course_location)
+        status, headers, notice = admin.call('/api/notices', 'POST', body={
+            'title': 'Temporary smoke notice', 'body': 'This test announcement will be removed.'
+        })
+        assert status == 201, 'Notice creation failed'
+        created.append(headers['Location'])
+        assert clients['students'].call(headers['Location'])[0] == 200, 'Student could not read a notice'
+        assert clients['teachers'].call('/api/courses')[2][0]['id'] == course['id'], 'Teacher course scope failed'
+        assert members['TEACHER'].call(course_location)[0] == 404, 'Other teacher accessed an unassigned course'
+        assert clients['students'].call('/api/notices', 'POST', body={})[0] == 403, 'Student published a notice'
+
+        status, headers, enrollment = clients['students'].call('/api/enrollments', 'POST', body={'courseId': course['id']})
+        assert status == 201, 'Student enrollment failed'
+        enrollment_location = headers['Location']
+        assert admin.call(course_location)[2]['enrolledCount'] == 1, 'Enrollment count did not update'
+        assert clients['teachers'].call('/api/enrollments')[2][0]['studentId'] == identities['students']['id'], 'Teacher roster failed'
+        assert members['STUDENT'].call(enrollment_location)[0] == 404, 'Student could read a peer enrollment'
+        assert members['TEACHER'].call(enrollment_location)[0] == 404, 'Other teacher could read a private roster'
+        assert clients['students'].call('/api/enrollments', 'POST', body={'courseId': course['id']})[0] == 409, 'Duplicate enrollment was accepted'
+        assert members['STUDENT'].call('/api/enrollments', 'POST', body={'courseId': course['id']})[0] == 409, 'Full course accepted an enrollment'
+        assert admin.call(course_location, 'DELETE')[0] == 409, 'Enrolled course was deleted'
+        assert admin.call('/api/students/' + str(identities['students']['id']), 'DELETE')[0] == 409, 'Enrolled student account was deleted'
+        assert clients['students'].call(enrollment_location, 'DELETE')[0] == 204, 'Student withdrawal failed'
+        enrollment_location = None
+        assert admin.call(course_location)[2]['enrolledCount'] == 0, 'Withdrawal did not free the seat'
+    finally:
+        if enrollment_location:
+            assert admin.call(enrollment_location, 'DELETE')[0] in (204, 404), 'Enrollment cleanup failed'
+        for path in reversed(created):
+            assert admin.call(path, 'DELETE')[0] == 204, f'Test resource cleanup failed: {path}'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base-url', default='http://localhost:8080')
@@ -84,7 +139,7 @@ def main():
     else:
         raise AssertionError('Application did not become healthy within 30 attempts')
 
-    for path, expected in [('/', 'login-form'), ('/management.html', 'account-rows'), ('/css/styles.css', '--accent')]:
+    for path, expected in [('/', 'login-form'), ('/management.html', 'summary-cards'), ('/css/styles.css', '--accent'), ('/js/ui.js', 'createDialogs')]:
         status, _, body = anonymous.call(path)
         assert status == 200 and expected in body, f'Page or asset unavailable: {path}'
     assert anonymous.call('/api/students')[0] == 401, 'Anonymous client could access accounts'
@@ -143,10 +198,11 @@ def main():
             assert status == 204 and body == '', 'Deletion did not return an empty 204'
         assert admin.call(location)[0] == 404, 'Deleted resource still exists'
 
+    academic_checks(admin, members, suffix)
     assert admin.call('/api/auth/logout', 'POST')[0] == 204, 'Logout failed'
     admin.csrf = None
     assert admin.call('/api/auth/me')[0] == 401, 'Logout left an authenticated session'
-    print('HTTP smoke checks passed: pages, cookies, all role logins, ownership, admin CRUD, and logout.')
+    print('HTTP smoke checks passed: assets, all role logins, ownership, account CRUD, courses, notices, rosters, enrollment, capacity, withdrawal, and logout.')
 
 
 if __name__ == '__main__':
