@@ -36,8 +36,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> integrityError(DataIntegrityViolationException ex) {
-        // A concurrent email write may reach the unique constraint after the service check.
-        return error(HttpStatus.CONFLICT, "DATA_CONFLICT", "The account conflicts with an existing record.");
+        // Database constraints also protect against concurrent writes and dependent-record deletion.
+        return error(HttpStatus.CONFLICT, "DATA_CONFLICT", "This record has a dependency or conflicts with an existing record. Withdraw enrollments or reassign courses before deleting an account.");
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -49,7 +49,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiError> unsupportedContentType(HttpMediaTypeNotSupportedException ex) {
-        return error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", "Use Content-Type: application/json for account writes.");
+        return error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", "Use Content-Type: application/json for resource writes.");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

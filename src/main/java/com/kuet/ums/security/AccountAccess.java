@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import java.util.Arrays;
 
 @Component
 public class AccountAccess {
@@ -19,6 +20,13 @@ public class AccountAccess {
     }
 
     public boolean isAdmin() { return currentAccount().getRole() == Role.ADMIN; }
+
+    public void requireRole(Role... roles) {
+        Role actor = currentAccount().getRole();
+        if (Arrays.stream(roles).noneMatch(role -> role == actor)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "Your role cannot perform this action.");
+        }
+    }
 
     public void requireAdmin() {
         if (!isAdmin()) {
