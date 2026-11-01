@@ -2,7 +2,7 @@
 
 ## Start in IntelliJ
 
-1. Open `pom.xml` as a Maven project; select JDK 17 or 21.
+1. Open `pom.xml` as a Maven project; select JDK 25.
 2. Copy `.env.example` to `.env` only if `.env` does not exist.
 3. In the IDE terminal: `docker compose stop app`, then `docker compose up -d --wait db`.
 4. Run the shared **University Management** configuration, or the application's `main()` method.
@@ -35,7 +35,7 @@ Open `user_accounts`, `courses`, `enrollments`, and `notices` in IntelliJ or pgA
 | `security/AccountAccess.java`, `config/SecurityConfig.java` | Service authorization plus route RBAC, BCrypt, session/CSRF protection |
 | `db/migration/V3__add_academic_resources.sql` | Versioned schema, unique/FK/check constraints, indexes |
 | `static/js/management.js`, `static/js/ui.js` | API-driven views and reusable DOM/dialog components |
-| `Dockerfile`, `compose.yaml`, `.run/` | Java 17 container, persistent database, standard IntelliJ main-class run |
+| `Dockerfile`, `compose.yaml`, `.run/` | Java 25 container, persistent database, standard IntelliJ main-class run |
 
 The patterns are layered architecture, Repository, DTO, constructor injection, and central exception handling. Keep the explanation tied to these concrete responsibilities.
 

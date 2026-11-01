@@ -21,7 +21,7 @@ Guests cannot access resource APIs. Same-role account IDs belonging to someone e
 
 ## Technology and design
 
-Java 17 target (JDK 21 also works), Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, JPA, Flyway, and Spring Security. HTML/CSS/JavaScript are served by Spring Boot; no frontend toolchain is needed. Use [the shared IntelliJ Application configuration](INTELLIJ.md).
+Java 25 LTS, Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, JPA, Flyway, and Spring Security. HTML/CSS/JavaScript are served by Spring Boot; no frontend toolchain is needed. Use [the shared IntelliJ Application configuration](INTELLIJ.md).
 
 ```mermaid
 flowchart LR
@@ -104,4 +104,4 @@ The default `demo` profile seeds three accounts, three courses, one enrollment, 
 
 A shared responsive sidebar provides Overview, Courses, role-specific People/Enrollments, Notice board, and My profile. Summary cards show real data; lists support search and course filters. Forms have labels/validation, destructive operations require confirmation, and loading/empty/success/error states are visible. Content uses DOM text nodes rather than HTML interpolation.
 
-IntelliJ runs `UniversityManagementApplication.main()` with project-root working directory. Docker Compose supplies PostgreSQL at `localhost:15432`; the app is at `localhost:8080`. Optional pgAdmin is at `localhost:5050`, with a pre-registered server on fresh volumes. The multi-stage Dockerfile builds and runs on Java 17 as a non-root user. [Run guide](INTELLIJ.md) · [Database guide](DATABASE.md).
+IntelliJ runs `UniversityManagementApplication.main()` with project-root working directory. Docker Compose supplies PostgreSQL at `localhost:15432`; the app is at `localhost:8080`. Optional pgAdmin is at `localhost:5050`, with a pre-registered server on fresh volumes. The multi-stage Dockerfile builds and runs on Java 25 as a non-root user. [Run guide](INTELLIJ.md) · [Database guide](DATABASE.md).

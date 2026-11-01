@@ -20,7 +20,7 @@ A small university portal with Admin, Teacher, and Student dashboards. It manage
 - [API example](docs/API.md) — login, CSRF, and a complete teacher account workflow.
 - [Lab walkthrough](docs/DEMO.md) — a short presentation and manual UI check.
 
-**Stack:** Java 17 target (JDK 21 works too), Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, HTML/CSS/JavaScript.
+**Stack:** Java 25 LTS, Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, HTML/CSS/JavaScript.
 
 **Core rule:** admins manage all three resources. Teachers and students can view/edit only their own profile; admins create and delete accounts.
 
@@ -28,8 +28,10 @@ A small university portal with Admin, Teacher, and Student dashboards. It manage
 
 Copy `.env.example` to `.env` once. Then choose a mode:
 
-- **IntelliJ:** open `pom.xml`, select JDK 17 or 21, stop any Docker app with `docker compose stop app`, run `docker compose up -d --wait db` in the terminal, then run the shared **University Management** configuration.
+- **IntelliJ:** open `pom.xml`, select JDK 25, stop any Docker app with `docker compose stop app`, run `docker compose up -d --wait db` in the terminal, then run the shared **University Management** configuration.
 - **Docker:** run `docker compose up --build` from the project folder.
+
+On this Mac, you can also double-click `scripts/open-intellij.command`, then click **Run** in IntelliJ.
 
 Open **http://localhost:8080** to sign in. Health: `http://localhost:8080/actuator/health` returns `{"status":"UP"}`. Use only one application run mode at a time to avoid a port conflict.
 

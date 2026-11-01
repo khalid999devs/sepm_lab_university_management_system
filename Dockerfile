@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk-jammy AS build
+FROM eclipse-temurin:25-jdk-jammy AS build
 WORKDIR /workspace
 
 COPY .mvn .mvn
@@ -8,7 +8,7 @@ RUN chmod +x mvnw
 COPY src src
 RUN ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 WORKDIR /app
 RUN groupadd --system ums && useradd --system --gid ums --home-dir /app ums
 
