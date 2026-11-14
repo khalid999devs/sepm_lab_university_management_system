@@ -40,7 +40,7 @@ To browse `public.user_accounts` in IntelliJ's Database window or pgAdmin, follo
 
 ## Tests and verified run path
 
-Right-click `src/test/java/com/kuet/ums/AccountApiTest.java` and run it, or run `./mvnw verify` in the terminal. Docker must be running; Testcontainers uses a separate temporary PostgreSQL database and does not erase your app's database.
+Right-click a `*UnitTest.java` file and run it without Docker, or run `./mvnw -Dtest='*UnitTest' test` in the terminal. For the integration tests, right-click `SimpleIntegrationTest.java`, `AccountApiTest.java`, or `AcademicApiTest.java`, or run `./mvnw verify`. Docker must be running for Testcontainers; it uses a separate temporary PostgreSQL database and does not erase your app's database. See [Testing guide](TESTING.md) for the tests to present.
 
 Direct Java main-class startup and the full HTTP smoke test passed against PostgreSQL. The project and Docker runtime now use Java 25. IntelliJ's GUI import/run clicks have not been exercised here; the shared run configuration uses the verified main class and project-root working directory.
 

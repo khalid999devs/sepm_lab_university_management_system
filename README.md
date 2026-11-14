@@ -19,6 +19,7 @@ A small university portal with Admin, Teacher, and Student dashboards. It manage
 - [Database access](docs/DATABASE.md) — connect using IntelliJ, pgAdmin, or another PostgreSQL client.
 - [API example](docs/API.md) — login, CSRF, and a complete teacher account workflow.
 - [Lab walkthrough](docs/DEMO.md) — a short presentation and manual UI check.
+- [Testing guide](docs/TESTING.md) — the unit and integration tests, commands, and viva explanation.
 
 **Stack:** Java 25 LTS, Spring Boot 3.5.16, Maven Wrapper, PostgreSQL 17, HTML/CSS/JavaScript.
 
@@ -66,13 +67,19 @@ The final admin cannot be deleted, including by concurrent requests. Course-row 
 
 ## Verify
 
-With Docker running:
+Run the 15 unit tests without Docker:
+
+```sh
+./mvnw -Dtest='*UnitTest' test
+```
+
+With Docker running, run the complete suite:
 
 ```sh
 ./mvnw verify
 ```
 
-On Windows, use `.\mvnw.cmd verify`. The 51 integration tests use isolated PostgreSQL containers and the real Flyway migrations. They check account CRUD, role/ownership boundaries, course/notice CRUD, private rosters, enrollment and capacity, dependent deletion, validation, CSRF, sessions, and concurrent enrollment/admin deletion.
+On Windows, use `.\mvnw.cmd verify`. The 15 unit tests in `src/test/java/com/kuet/ums/unit` cover password rules, account access, password hashing, final-admin protection, course input clean-up, enrollment rules, and notices. The integration tests are in the `integration` folder beside it. The 54 integration test executions use isolated PostgreSQL containers and real Flyway migrations. They check account CRUD, role/ownership boundaries, course/notice CRUD, private rosters, enrollment and capacity, dependent deletion, validation, CSRF, sessions, and concurrent enrollment/admin deletion. See the [testing guide](docs/TESTING.md) for the three short integration tests in `SimpleIntegrationTest`.
 
 With the demo app running, optionally check its real HTTP endpoints:
 

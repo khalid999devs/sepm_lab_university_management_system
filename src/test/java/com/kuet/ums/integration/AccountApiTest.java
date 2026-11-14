@@ -1,4 +1,4 @@
-package com.kuet.ums;
+package com.kuet.ums.integration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
